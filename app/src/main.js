@@ -1,4 +1,5 @@
 // Wires the page: pick a photo, type a caption, export the square cover as a PNG. A `?shot=` query sets up a fixed
+// GTA 6 Cover Art app - main entry point
 // scene for a screenshot instead (./shots.js).
 import { drawCover } from './cover.js';
 import { runShot } from './shots.js';

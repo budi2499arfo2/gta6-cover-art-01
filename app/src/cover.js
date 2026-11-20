@@ -1,4 +1,5 @@
 // Draws the cover: the photo filling the square, a sunset tint rising from the bottom, and the caption in bold
+// Cover art generation - GTA 6 style
 // white capitals along the foot.
 
 /** Draws `photo` (an image, or null) and `caption` onto the canvas's 2D context, at the canvas's own size. */
