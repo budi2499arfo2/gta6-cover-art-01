@@ -130,6 +130,49 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .export:active { transform: translateY(0); filter: brightness(0.97); }
 .export[disabled] { opacity: 0.55; cursor: progress; }
 
+/* The randomize control: deliberately not a gradient like the exports — it is a secondary action with its own
+   little die, so the primary (export) still leads the top bar. */
+.randomize {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: 8px;
+  border: 1px solid rgba(61, 228, 255, 0.34);
+  background: rgba(61, 228, 255, 0.08);
+  color: #d6f6ff;
+  font: 700 11.5px/1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: background 0.13s ease, border-color 0.13s ease, transform 0.13s ease;
+}
+.randomize:hover {
+  background: rgba(61, 228, 255, 0.16);
+  border-color: rgba(61, 228, 255, 0.62);
+  transform: translateY(-1px);
+}
+.randomize:active { transform: translateY(0) scale(0.98); }
+.randomize.spin .dice { animation: dice-tumble 0.42s ease; }
+.dice {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  border-radius: 3px;
+  background:
+    radial-gradient(circle at 32% 32%, #06222b 1.5px, transparent 1.6px),
+    radial-gradient(circle at 68% 32%, #06222b 1.5px, transparent 1.6px),
+    radial-gradient(circle at 50% 50%, #06222b 1.5px, transparent 1.6px),
+    radial-gradient(circle at 32% 68%, #06222b 1.5px, transparent 1.6px),
+    radial-gradient(circle at 68% 68%, #06222b 1.5px, transparent 1.6px),
+    linear-gradient(150deg, #d6f6ff, #7fe6ff);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25) inset;
+}
+@keyframes dice-tumble {
+  0% { transform: rotate(0deg) scale(1); }
+  55% { transform: rotate(190deg) scale(1.18); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
 /* ---------------------------------------------------------------- workspace */
 
 .workspace {
@@ -445,6 +488,47 @@ input[type=range]::-moz-range-thumb {
 }
 .shot-link:hover { color: var(--ink); border-color: var(--line-bright); background: rgba(255, 255, 255, 0.05); }
 
+/* keyboard reference: a single always-visible bar under the canvas, so the shortcuts are discoverable without
+   scrolling the rail. It is one line of keycaps and their verbs. */
+
+.keybar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(10, 8, 18, 0.72);
+  font: 600 10.5px/1 var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.keybar-label {
+  font: 700 9.5px/1 var(--mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 45, 149, 0.75);
+  padding-right: 4px;
+  border-right: 1px solid var(--line);
+}
+.key { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.keybar.folded { display: none; }
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid rgba(168, 152, 210, 0.3);
+  border-bottom-width: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  font: 700 9.5px/1 var(--mono);
+  color: var(--ink-dim);
+}
+
 /* ---------------------------------------------------------------- stage */
 
 .stage {
@@ -518,7 +602,8 @@ body.shot-cover .shell { padding: 0; max-width: none; gap: 0; }
 body.shot-cover .topbar,
 body.shot-cover .panel-rail,
 body.shot-cover .stage-head,
-body.shot-cover .stage-foot { display: none; }
+body.shot-cover .stage-foot,
+body.shot-cover .keybar { display: none; }
 body.shot-cover .workspace { display: block; }
 body.shot-cover .stage { position: static; display: block; }
 body.shot-cover .canvas-wrap { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }

@@ -27,44 +27,46 @@ export const PRESETS = [
   {
     id: 'vice',
     name: 'Vice Sunset',
-    hint: 'magenta / cyan / tangerine',
-    swatch: ['#ff2d95', '#22e0ff', '#ff9a3d'],
-    backdrop: ['#2a0640', '#5c1064', '#1b0323'],
-    gutter: '#0b0216',
-    ink: ['#220a33', '#0b0316'],
-    accentA: '#ff2d95',
-    accentB: '#3de4ff',
-    accentC: '#ffb35c',
-    washTop: 'rgba(255, 45, 149, 0.55)',
-    washBottom: 'rgba(255, 140, 54, 0.55)',
-    washDeep: 'rgba(58, 8, 96, 0.45)',
-    sky: ['rgba(64, 8, 104, 0.62)', 'rgba(255, 45, 149, 0.30)', 'rgba(255, 150, 70, 0.52)'],
-    sun: 'rgba(255, 214, 160, 1)',
-    titleFill: ['#ffffff', '#ffe6f6', '#ff9ed8', '#ffb264'],
-    titleOutline: '#12021d',
-    titleEdge: '#4d0a44',
-    bandLine: 'rgba(255, 45, 149, 0.75)',
+    hint: 'teal sky / tangerine sun',
+    swatch: ['#ff7a1f', '#22e8d8', '#ffd08a'],
+    backdrop: ['#052732', '#0b5b63', '#170711'],
+    gutter: '#03151b',
+    ink: ['#06303a', '#03101a'],
+    accentA: '#ff7a1f',
+    accentB: '#22e8d8',
+    accentC: '#ffc46b',
+    washTop: 'rgba(0, 214, 200, 0.5)',
+    washBottom: 'rgba(255, 126, 32, 0.58)',
+    washDeep: 'rgba(6, 58, 66, 0.45)',
+    sky: ['rgba(0, 206, 200, 0.55)', 'rgba(255, 150, 60, 0.26)', 'rgba(255, 112, 26, 0.62)'],
+    sun: 'rgba(255, 238, 196, 1)',
+    rayColor: 'rgba(255, 172, 88, 1)',
+    titleFill: ['#ffffff', '#ffe9c8', '#ffab5e', '#ff6a1f'],
+    titleOutline: '#04222a',
+    titleEdge: '#0b4d55',
+    bandLine: 'rgba(255, 140, 60, 0.8)',
   },
   {
     id: 'neon',
-    name: 'Miami Neon',
-    hint: 'electric pink / ultramarine',
-    swatch: ['#ff2eea', '#2b4bff', '#21f3ff'],
-    backdrop: ['#070726', '#2a0b55', '#05040f'],
-    gutter: '#040310',
-    ink: ['#0b0a2c', '#03030e'],
-    accentA: '#ff2eea',
-    accentB: '#35d8ff',
-    accentC: '#8f7bff',
-    washTop: 'rgba(60, 60, 255, 0.55)',
-    washBottom: 'rgba(255, 46, 234, 0.55)',
-    washDeep: 'rgba(12, 6, 62, 0.45)',
-    sky: ['rgba(24, 10, 110, 0.66)', 'rgba(255, 46, 234, 0.26)', 'rgba(60, 120, 255, 0.5)'],
-    sun: 'rgba(190, 230, 255, 1)',
-    titleFill: ['#ffffff', '#e9e4ff', '#b9a6ff', '#4fe6ff'],
+    name: 'Neon Night',
+    hint: 'hot pink / electric cyan',
+    swatch: ['#ff2fb0', '#22f0ff', '#8a5cff'],
+    backdrop: ['#0a0526', '#2c0a4c', '#04020f'],
+    gutter: '#050214',
+    ink: ['#0d0730', '#04020f'],
+    accentA: '#ff2fb0',
+    accentB: '#22f0ff',
+    accentC: '#ff8ad8',
+    washTop: 'rgba(255, 47, 176, 0.55)',
+    washBottom: 'rgba(34, 240, 255, 0.5)',
+    washDeep: 'rgba(28, 6, 70, 0.45)',
+    sky: ['rgba(120, 20, 170, 0.6)', 'rgba(255, 47, 176, 0.3)', 'rgba(34, 240, 255, 0.46)'],
+    sun: 'rgba(255, 196, 244, 1)',
+    rayColor: 'rgba(255, 62, 196, 1)',
+    titleFill: ['#ffffff', '#ffe3f6', '#ff8ad8', '#22f0ff'],
     titleOutline: '#08031c',
-    titleEdge: '#1c1160',
-    bandLine: 'rgba(90, 180, 255, 0.8)',
+    titleEdge: '#2a1268',
+    bandLine: 'rgba(34, 240, 255, 0.8)',
   },
   {
     id: 'heat',
@@ -82,6 +84,7 @@ export const PRESETS = [
     washDeep: 'rgba(74, 8, 4, 0.45)',
     sky: ['rgba(96, 10, 4, 0.62)', 'rgba(255, 74, 46, 0.30)', 'rgba(255, 170, 60, 0.55)'],
     sun: 'rgba(255, 226, 160, 1)',
+    rayColor: 'rgba(255, 150, 70, 1)',
     titleFill: ['#fffdf6', '#ffe9c9', '#ffb265', '#ff6a3d'],
     titleOutline: '#1a0400',
     titleEdge: '#5c1203',
@@ -103,6 +106,7 @@ export const PRESETS = [
     washDeep: 'rgba(10, 22, 44, 0.5)',
     sky: ['rgba(26, 44, 86, 0.66)', 'rgba(190, 140, 220, 0.22)', 'rgba(255, 150, 200, 0.34)'],
     sun: 'rgba(236, 246, 255, 1)',
+    rayColor: 'rgba(170, 200, 255, 1)',
     titleFill: ['#ffffff', '#eef3ff', '#c3d3ff', '#ffb3e4'],
     titleOutline: '#050810',
     titleEdge: '#232c4d',
@@ -124,6 +128,7 @@ export const PRESETS = [
     washDeep: 'rgba(4, 44, 30, 0.45)',
     sky: ['rgba(4, 52, 36, 0.66)', 'rgba(0, 245, 196, 0.22)', 'rgba(182, 255, 61, 0.42)'],
     sun: 'rgba(226, 255, 190, 1)',
+    rayColor: 'rgba(120, 255, 200, 1)',
     titleFill: ['#ffffff', '#eaffd6', '#b6ff3d', '#39f5d0'],
     titleOutline: '#02110a',
     titleEdge: '#0c3c2a',
@@ -359,15 +364,220 @@ export function planLayout(ctx, opts, width, height) {
 
 // ---------------------------------------------------------------- backdrop
 
+/** Where the sun sits, in design units: high and right of centre, its disc big enough to spill past the grid. */
+function sunGeometry(plan) {
+  const { W, HD } = plan;
+  const x = W * (plan.landscape ? 0.7 : 0.68);
+  const y = HD * (plan.landscape ? 0.2 : 0.25);
+  return {
+    x,
+    y,
+    r: W * (plan.landscape ? 0.115 : 0.15),
+    horizon: HD * (plan.landscape ? 0.34 : 0.42),
+  };
+}
+
+/**
+ * The radiating ray burst behind everything: wedges of light leaving the sun, alternating strong and weak so the
+ * disc reads as a printed sun rather than a blurred blob. One radial gradient per parity group keeps it to two
+ * gradients however many rays there are. Drawn twice — once in the backdrop at full strength (it shows in the
+ * gutters and around the grid) and once as a faint screen pass over the panels, which is what carries the burst
+ * across the whole sheet.
+ */
+function drawRays(ctx, sun, preset, alpha, count) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = alpha;
+  ctx.translate(sun.x, sun.y);
+  const reach = Math.max(sun.x, sun.y) * 2.6;
+  for (const parity of [0, 1]) {
+    const grad = ctx.createRadialGradient(0, 0, sun.r * 0.55, 0, 0, reach);
+    grad.addColorStop(0, preset.rayColor);
+    grad.addColorStop(0.22, preset.rayColor);
+    grad.addColorStop(0.62, 'rgba(255, 255, 255, 0.06)');
+    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    const step = (Math.PI * 2) / count;
+    for (let i = parity; i < count; i += 2) {
+      const a0 = i * step - Math.PI / 2;
+      const a1 = a0 + step * (parity === 0 ? 0.42 : 0.26);
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, reach, a0, a1);
+      ctx.closePath();
+    }
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/**
+ * The sun disc: a hot core, a hard limb, faint concentric rings and a long corona, sliced through the lower half
+ * by the old poster's horizontal cut bands. The bands are real holes — the disc is filled under an even-odd clip
+ * of the circle minus the stripes — so whatever is behind the sun (backdrop in the first pass, the photo collage
+ * in the second) shows back through them without any destructive compositing.
+ *
+ * `solid` decides the blend: the backdrop pass screens the disc into the sky, where there is nothing to hide; the
+ * overprint pass paints it with real opacity, because a screen over an already-bright photograph washes out to
+ * nothing. The overprint is also gated behind a slightly smaller disc so the collage's own edges stay visible.
+ */
+function drawSunDisc(ctx, sun, preset, { alpha = 0.82, corona = 2.6, bands = true, rings = true, solid = false, body = true } = {}) {
+  const R = sun.r * corona;
+  const rim = sun.r * (solid ? 0.92 : 0.985);
+  const stripes = [];
+  if (bands) {
+    for (let i = 0; i < 9; i++) {
+      const y = sun.y + sun.r * (0.02 + i * 0.115);
+      stripes.push([y, sun.r * (0.024 + i * 0.017)]);
+    }
+  }
+  const clipDiscAndBands = (radius) => {
+    ctx.beginPath();
+    ctx.arc(sun.x, sun.y, radius, 0, Math.PI * 2);
+    for (const [y, h] of stripes) ctx.rect(sun.x - sun.r * 1.05, y, sun.r * 2.1, h);
+    ctx.clip('evenodd');
+  };
+
+  ctx.save();
+  ctx.globalCompositeOperation = solid ? 'source-over' : 'screen';
+
+  // The disc body, under the clip that punches the bands out. Solid: a saturated fill that keeps the photo
+  // texture in its top stops and lands on the preset's own sun colour at the limb.
+  ctx.save();
+  if (body) {
+    clipDiscAndBands(rim);
+    if (solid) {
+      const fill = ctx.createRadialGradient(sun.x, sun.y - sun.r * 0.35, sun.r * 0.05, sun.x, sun.y, rim);
+      fill.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+      fill.addColorStop(0.42, preset.rayColor);
+      fill.addColorStop(0.86, preset.accentC);
+      fill.addColorStop(1, preset.accentA);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = fill;
+    } else {
+      const fill = ctx.createRadialGradient(sun.x, sun.y, 0, sun.x, sun.y, R);
+      fill.addColorStop(0, '#ffffff');
+      fill.addColorStop(Math.max(0.001, (rim / R) * 0.72), '#ffffff');
+      fill.addColorStop(rim / R, preset.sun);
+      fill.addColorStop(Math.min(0.995, rim / R + 0.008), 'rgba(255, 255, 255, 0.4)');
+      fill.addColorStop(Math.min(0.999, rim / R + 0.2), 'rgba(255, 255, 255, 0.07)');
+      fill.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = fill;
+    }
+    ctx.beginPath();
+    ctx.arc(sun.x, sun.y, R, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // The hard limb: one drawn circle, so the disc always has a crisp edge whatever is behind it.
+  ctx.save();
+  ctx.globalCompositeOperation = solid ? 'source-over' : 'screen';
+  ctx.globalAlpha = solid ? Math.min(1, alpha + 0.25) : alpha * 0.6;
+  ctx.strokeStyle = solid ? preset.sun : 'rgba(255, 255, 255, 0.5)';
+  ctx.lineWidth = Math.max(2, sun.r * (solid ? 0.035 : 0.016));
+  ctx.beginPath();
+  ctx.arc(sun.x, sun.y, rim, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // A dark keyline just outside the limb separates the disc from a busy photograph.
+  if (solid) {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.34;
+    ctx.strokeStyle = preset.titleOutline;
+    ctx.lineWidth = Math.max(2, sun.r * 0.055);
+    ctx.beginPath();
+    ctx.arc(sun.x, sun.y, rim + sun.r * 0.03, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  if (rings) {
+    ctx.save();
+    clipDiscAndBands(rim * (solid ? 1.02 : 1));
+    ctx.globalCompositeOperation = solid ? 'source-over' : 'screen';
+    ctx.strokeStyle = solid ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.32)';
+    ctx.lineWidth = Math.max(1, sun.r * 0.015);
+    ctx.globalAlpha = solid ? alpha * 0.8 : alpha * 0.7;
+    for (const k of [0.42, 0.62, 0.8]) {
+      ctx.beginPath();
+      ctx.arc(sun.x, sun.y, rim * k, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/**
+ * The disc's cut bands as *printed* stripes: dark rules laid across the disc's lower half, clipped to its circle.
+ * The backdrop pass punches real holes (the sky shows through); this pass paints them, which is what reads on top
+ * of a busy photograph. Both are the same rhythm so the two passes agree where they overlap in the gutters.
+ */
+function drawSunBands(ctx, sun, preset, alpha = 0.5) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(sun.x, sun.y, sun.r * 0.92, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = preset.titleOutline;
+  for (let i = 0; i < 9; i++) {
+    const y = sun.y + sun.r * (0.02 + i * 0.115);
+    ctx.fillRect(sun.x - sun.r, y, sun.r * 2, sun.r * (0.024 + i * 0.017));
+  }
+  ctx.restore();
+}
+
 /** The sunset backdrop that shows through the gutters and around the panels. */
 function drawBackdrop(ctx, plan, preset) {
   const { W, HD } = plan;
+  const sun = sunGeometry(plan);
+
   const sky = ctx.createLinearGradient(0, 0, W * 0.25, HD);
   sky.addColorStop(0, preset.backdrop[0]);
   sky.addColorStop(0.52, preset.backdrop[1]);
   sky.addColorStop(1, preset.backdrop[2]);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, HD);
+
+  // The ray burst first, so the disc burns over the roots of the rays.
+  drawRays(ctx, sun, preset, 0.5, 44);
+
+  // The horizon glow band: a broad warm slab of light along the waterline, brightest on the sun's own meridian.
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  const bandTop = sun.horizon - HD * 0.19;
+  const bandBottom = sun.horizon + HD * 0.3;
+  const hz = ctx.createLinearGradient(0, bandTop, 0, bandBottom);
+  hz.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  hz.addColorStop(0.36, 'rgba(255, 255, 255, 0.06)');
+  hz.addColorStop(0.46, preset.accentC);
+  hz.addColorStop(0.5, 'rgba(255, 255, 255, 0.72)');
+  hz.addColorStop(0.56, preset.accentA);
+  hz.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.globalAlpha = 0.34;
+  ctx.fillStyle = hz;
+  ctx.fillRect(0, bandTop, W, bandBottom - bandTop);
+
+  // The open water under the band: a couple of long shimmer rules, thinning as they fall away.
+  const sea = ctx.createLinearGradient(0, sun.horizon, 0, HD);
+  sea.addColorStop(0, 'rgba(255, 255, 255, 0.14)');
+  sea.addColorStop(0.5, 'rgba(255, 255, 255, 0.03)');
+  sea.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = sea;
+  ctx.fillRect(0, sun.horizon, W, HD - sun.horizon);
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = '#ffffff';
+  for (let i = 0; i < 9; i++) {
+    const y = sun.horizon + HD * (0.012 + i * 0.026);
+    const w = W * (0.5 - i * 0.04);
+    ctx.fillRect(sun.x - w / 2, y, w, Math.max(1, HD * 0.0022));
+  }
+  ctx.restore();
+
+  drawSunDisc(ctx, sun, preset, { alpha: 0.9, corona: 2.6, bands: true });
 
   // Two soft light sources behind the collage, so the gutters glow instead of reading flat black.
   ctx.save();
@@ -376,13 +586,13 @@ function drawBackdrop(ctx, plan, preset) {
   glow.addColorStop(0, preset.accentC);
   glow.addColorStop(0.35, preset.accentA);
   glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalAlpha = 0.3;
+  ctx.globalAlpha = 0.26;
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, HD);
   const cool = ctx.createRadialGradient(W * 0.14, HD * 0.62, 0, W * 0.14, HD * 0.62, W * 0.55);
   cool.addColorStop(0, preset.accentB);
   cool.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalAlpha = 0.16;
+  ctx.globalAlpha = 0.22;
   ctx.fillStyle = cool;
   ctx.fillRect(0, 0, W, HD);
   ctx.restore();
@@ -516,8 +726,8 @@ function gradePanel(ctx, cell, preset, seed) {
   ctx.restore();
 }
 
-/** The black keyline and the thin light bevel that make each panel read as a pasted print. */
-function strokePanel(ctx, cell, preset) {
+/** The black keyline, the thin light bevel and the inset rule that make each panel read as a pasted print. */
+function strokePanel(ctx, cell, preset, hero) {
   ctx.save();
   ctx.lineWidth = 3;
   ctx.strokeStyle = 'rgba(4, 1, 10, 0.9)';
@@ -525,6 +735,46 @@ function strokePanel(ctx, cell, preset) {
   ctx.lineWidth = 1.2;
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
   ctx.strokeRect(cell.x + 0.6, cell.y + 0.6, cell.w - 1.2, cell.h - 1.2);
+
+  // A bright inner rule, inset a little further: on the hero it goes white-hot, on the companions it stays a
+  // hairline of the preset's own light, so the hero is the print the eye lands on first.
+  const inset = hero ? 7 : 5;
+  ctx.lineWidth = hero ? 1.6 : 1;
+  ctx.strokeStyle = hero ? 'rgba(255, 255, 255, 0.72)' : 'rgba(255, 255, 255, 0.3)';
+  ctx.strokeRect(cell.x + inset, cell.y + inset, cell.w - inset * 2, cell.h - inset * 2);
+
+  if (hero) {
+    // Corner brackets on the hero: four L-marks inside the frame, the contact-sheet crop mark.
+    const tick = Math.min(cell.w, cell.h) * 0.1;
+    const off = inset + 3;
+    const edges = [
+      [cell.x + off, cell.y + off, 1, 1],
+      [cell.x + cell.w - off, cell.y + off, -1, 1],
+      [cell.x + off, cell.y + cell.h - off, 1, -1],
+      [cell.x + cell.w - off, cell.y + cell.h - off, -1, -1],
+    ];
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'square';
+    ctx.strokeStyle = preset.accentC;
+    ctx.globalAlpha = 0.95;
+    for (const [cx, cy, sx, sy] of edges) {
+      ctx.beginPath();
+      ctx.moveTo(cx + sx * tick, cy);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(cx, cy + sy * tick);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 0.9;
+    for (const [cx, cy, sx, sy] of edges) {
+      ctx.beginPath();
+      ctx.moveTo(cx + sx * tick, cy);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(cx, cy + sy * tick);
+      ctx.stroke();
+    }
+  }
   ctx.restore();
 }
 
@@ -554,6 +804,7 @@ function markPanel(ctx, cell, index, preset) {
 /** The full-canvas grade: sunset gradient, sun flare, streak and a cool bloom along the top edge. */
 function drawGrade(ctx, plan, preset) {
   const { W, HD } = plan;
+  const sun = sunGeometry(plan);
   ctx.save();
 
   // Sunset wash across the whole sheet, 'overlay' then 'screen' — the Vice City signature.
@@ -562,7 +813,7 @@ function drawGrade(ctx, plan, preset) {
   sunset.addColorStop(0.48, preset.sky[1]);
   sunset.addColorStop(1, preset.sky[2]);
   ctx.globalCompositeOperation = 'overlay';
-  ctx.globalAlpha = 0.5;
+  ctx.globalAlpha = 0.46;
   ctx.fillStyle = sunset;
   ctx.fillRect(0, 0, W, HD);
 
@@ -571,37 +822,96 @@ function drawGrade(ctx, plan, preset) {
   ctx.fillStyle = sunset;
   ctx.fillRect(0, 0, W, HD);
 
-  // The sun, high right, with a wide anamorphic streak through it.
-  const sunX = W * 0.8;
-  const sunY = HD * 0.1;
-  const sun = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, W * 0.46);
-  sun.addColorStop(0, preset.sun);
-  sun.addColorStop(0.12, 'rgba(255, 220, 180, 0.85)');
-  sun.addColorStop(0.4, 'rgba(255, 160, 120, 0.28)');
-  sun.addColorStop(1, 'rgba(255, 120, 80, 0)');
-  ctx.globalAlpha = 0.55;
-  ctx.fillStyle = sun;
+  // The ray burst again, faint, over the panels: this is what makes the collage sit inside one light instead of
+  // in front of it. Same geometry as the backdrop, so the rays line up through the gutters.
+  drawRays(ctx, sun, preset, 0.16, 44);
+
+  // The disc again, over the collage: a flat printed orange disc with the cut bands drawn as dark stripes across
+  // it, which is the old poster's treatment — a graphic sun, not a photographic flare.
+  drawSunDisc(ctx, sun, preset, { alpha: 0.66, corona: 1.42, bands: false, rings: true, solid: true });
+  drawSunBands(ctx, sun, preset, 0.5);
+
+  // The sun's own bloom, centred on the disc. Kept modest: the disc is a printed shape, and a big radial glow
+  // over the collage just lifts every photo's blacks and flattens the whole sheet.
+  const glowR = W * 0.42;
+  const sunGlow = ctx.createRadialGradient(sun.x, sun.y, 0, sun.x, sun.y, glowR);
+  sunGlow.addColorStop(0, preset.sun);
+  sunGlow.addColorStop(0.08, 'rgba(255, 232, 200, 0.55)');
+  sunGlow.addColorStop(0.3, 'rgba(255, 168, 120, 0.14)');
+  sunGlow.addColorStop(1, 'rgba(255, 120, 80, 0)');
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = sunGlow;
   ctx.fillRect(0, 0, W, HD);
 
+  // The anamorphic streak through the sun: a wide horizontal bar, scaled to nothing vertically.
   ctx.save();
-  ctx.translate(sunX, sunY);
-  ctx.scale(1, 0.075);
-  const streak = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.7);
+  ctx.translate(sun.x, sun.y);
+  ctx.scale(1, 0.062);
+  const streak = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.72);
   streak.addColorStop(0, 'rgba(255, 250, 235, 0.9)');
-  streak.addColorStop(0.35, 'rgba(255, 200, 170, 0.28)');
+  streak.addColorStop(0.35, 'rgba(255, 200, 170, 0.26)');
   streak.addColorStop(1, 'rgba(255, 120, 160, 0)');
   ctx.globalAlpha = 0.5;
   ctx.fillStyle = streak;
-  ctx.fillRect(-W * 0.7, -W * 0.7, W * 1.4, W * 1.4);
+  ctx.fillRect(-W * 0.72, -W * 0.72, W * 1.44, W * 1.44);
+  ctx.restore();
+
+  // The diagonal sun flare: a long soft shaft from the sun's upper right, cut across the whole sheet. Built as a
+  // band gradient perpendicular to its own direction so the light falls off on both sides of the axis.
+  ctx.save();
+  const angle = -Math.PI * 0.29;
+  const axisX = Math.cos(angle);
+  const axisY = Math.sin(angle);
+  ctx.translate(sun.x, sun.y);
+  ctx.rotate(angle);
+  const len = Math.max(W, HD) * 1.9;
+  const flare = ctx.createLinearGradient(0, -W * 0.34, 0, W * 0.34);
+  flare.addColorStop(0, 'rgba(255, 255, 255, 0)');
+  flare.addColorStop(0.38, 'rgba(255, 226, 210, 0.1)');
+  flare.addColorStop(0.5, 'rgba(255, 255, 255, 0.62)');
+  flare.addColorStop(0.62, 'rgba(255, 210, 200, 0.1)');
+  flare.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = flare;
+  ctx.beginPath();
+  ctx.moveTo(-len, 0);
+  ctx.lineTo(0, -W * 0.34);
+  ctx.lineTo(len, 0);
+  ctx.lineTo(0, W * 0.34);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // Two flare ghosts on the axis through the sun, on the far side of the frame: the classic lens reflection.
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (const [k, r, a] of [[0.55, 0.05, 0.14], [1.15, 0.032, 0.1], [1.7, 0.075, 0.08]]) {
+    const gx = sun.x - axisX * W * k;
+    const gy = sun.y - axisY * W * k;
+    const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, W * r);
+    g.addColorStop(0, preset.accentB);
+    g.addColorStop(0.62, preset.accentB);
+    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.globalAlpha = a;
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(gx, gy, W * r, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 
   // Cool bloom rising from the bottom-left, balancing the warm sun.
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
   const bloom = ctx.createRadialGradient(W * 0.08, HD, 0, W * 0.08, HD, W * 0.6);
   bloom.addColorStop(0, preset.accentB);
   bloom.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalAlpha = 0.14;
+  ctx.globalAlpha = 0.16;
   ctx.fillStyle = bloom;
   ctx.fillRect(0, 0, W, HD);
+  ctx.restore();
+
   ctx.restore();
 }
 
@@ -631,7 +941,9 @@ function planType(ctx, plan, opts, preset) {
   const titleTop = padTop + (subtitleRaw ? subtitleSize + gapSub : 0);
   const titleRoom = Math.max(bandH * 0.2, metaBaseline - metaSize * 1.6 - titleTop);
 
-  const trackingRatio = -0.012;
+  // Negative tracking is the GTA register, but the heavy ink outline eats the gap: at -0.012 the glyph edges
+  // in a long word touch, so the mark reads as one blob. A hair of positive tracking holds the letters apart.
+  const trackingRatio = 0.004;
   const min = Math.max(bandH * 0.12, 16);
   const base = Math.min(bandH * 0.5 * fontScale, titleRoom * 0.94);
 
@@ -656,6 +968,11 @@ function planType(ctx, plan, opts, preset) {
   ctx.font = `700 ${size}px ${TITLE_FONT}`;
   const widest = Math.max(...lines.map((line) => trackedWidth(ctx, line, size * trackingRatio)));
 
+  // Centre the block in the room it was given. The caption is usually width-bound, not height-bound, so without
+  // this the mark sits at the top of the band and leaves a hole underneath it.
+  const finalBlock = size * (capRatio + lineGap * (lines.length - 1));
+  const blockTop = titleTop + Math.max(0, (titleRoom - finalBlock) / 2);
+
   return {
     pad,
     markW,
@@ -673,16 +990,31 @@ function planType(ctx, plan, opts, preset) {
     padTop,
     titleTop,
     titleRoom,
-    blockH: size * (capRatio + lineGap * (lines.length - 1)),
+    blockH: finalBlock,
     lineGap,
     // Baselines are absolute canvas units: the band's own top plus the offset planned inside it.
-    firstBaseline: bandY + titleTop + size * capRatio,
+    firstBaseline: bandY + blockTop + size * capRatio,
     markX: W - pad - markW,
     metaBaseline: bandY + metaBaseline,
   };
 }
 
-/** Draws the caption in the GTA register: a soft cast shadow, two heavy strokes, a gradient fill, a lit edge. */
+/**
+ * Splits a caption line into its first word and the rest, so the wordmark can be set in two fills — the GTA
+ * register's two-tone logotype. Returns null when there is only one word to split.
+ */
+function splitFirstWord(text) {
+  const m = /^(\S+)(\s+)(\S.*)$/.exec(text.trim());
+  if (!m) return null;
+  return { head: m[1], tail: m[3] };
+}
+
+/**
+ * Draws the caption in the GTA register: a soft cast shadow, two heavy strokes, a gradient fill, a lit edge.
+ * When the caption has two words or more it is set as a two-tone wordmark — the first word in one fill, the
+ * rest in another, each with the heavy ink outline, so the logotype reads as a designed mark and not a line of
+ * type. A chromatic-aberration fringe (magenta left, cyan right) is laid on the glyph edges under the ink.
+ */
 function drawTitle(ctx, type, x, y, preset) {
   const { lines, size, tracking } = type;
   ctx.save();
@@ -692,53 +1024,110 @@ function drawTitle(ctx, type, x, y, preset) {
   ctx.lineJoin = 'round';
   ctx.miterLimit = 2;
 
-  const drawAll = (mode, dx, dy) => {
+  const drawAll = (mode, dx, dy, style) => {
+    if (style) ctx.fillStyle = style;
     lines.forEach((line, i) => {
       drawTracked(ctx, line, x + dx, y + dy + i * size * type.lineGap, tracking, mode);
     });
   };
 
-  // 1. cast shadow, blurred off the glyph edges so the type sits on the plate
+  // Runs of the block, each with its own fill: when there is a single line the first word takes the warm half of
+  // the preset and the rest the cool half. Each run is [text, x, baseline offset, fill stops]. Both runs start
+  // white at the cap line for the chrome look, then diverge hard into accentC/accentA and accentB — two colours
+  // at a glance, not one colour with a tint.
+  const runs = [];
+  const fillA = ['#ffffff', preset.accentC, preset.accentA];
+  const fillB = ['#ffffff', preset.accentB, preset.accentB];
+  lines.forEach((line, i) => {
+    const offset = i * size * type.lineGap;
+    const split = lines.length === 1 ? splitFirstWord(line) : null;
+    if (split) {
+      const headW = trackedWidth(ctx, split.head, tracking);
+      const spaceW = ctx.measureText(' ').width;
+      runs.push({ text: split.head, x, offset, fill: fillA });
+      runs.push({ text: split.tail, x: x + headW + spaceW, offset, fill: fillB });
+    } else {
+      runs.push({ text: line, x, offset, fill: i === 0 ? fillA : fillB });
+    }
+  });
+
+  // 2. chromatic-aberration fringing. The coloured rims go on *wider* than the ink and offset sideways, so the
+  // ink stroke drawn over them leaves a sliver of saturated magenta on one side of every letterform and cyan on
+  // the other. Drawing them as fills under the ink would be invisible (the ink is 0.2em wide, the offsets are a
+  // few pixels), and screening over a white-topped fill is a no-op, so this is the only way the fringe actually
+  // reads at print size.
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#ff2fd0';
+  ctx.lineWidth = size * 0.265;
+  drawAll('stroke', -size * 0.032, size * 0.006);
+  ctx.strokeStyle = '#1fe6ff';
+  ctx.lineWidth = size * 0.265;
+  drawAll('stroke', size * 0.032, -size * 0.006);
+
+  // 3. the cast shadow, blurred off the glyph edges so the type sits on the plate.
   ctx.save();
-  ctx.globalAlpha = 0.6;
+  ctx.globalAlpha = 0.62;
   ctx.fillStyle = '#05010c';
-  ctx.filter = `blur(${Math.max(2, size * 0.085)}px)`;
-  drawAll('fill', size * 0.035, size * 0.06);
+  ctx.filter = `blur(${Math.max(2, size * 0.09)}px)`;
+  drawAll('fill', size * 0.04, size * 0.07);
   ctx.restore();
 
-  // 2. the wide ink outline
+  // 4. the wide ink outline — thick, and twice over, so it closes the middle of the fringe but leaves its edges.
   ctx.strokeStyle = preset.titleOutline;
-  ctx.lineWidth = size * 0.175;
+  ctx.lineWidth = size * 0.2;
+  drawAll('stroke', 0, 0);
+  ctx.lineWidth = size * 0.115;
   drawAll('stroke', 0, 0);
 
-  // 3. a tighter rim in the preset's own colour
+  // 5. a tight neon rim inside the ink, in the preset's own colour, bouncing light back off the flat edge.
   ctx.strokeStyle = preset.titleEdge;
-  ctx.lineWidth = size * 0.072;
+  ctx.lineWidth = size * 0.062;
   drawAll('stroke', 0, 0);
 
-  // 4. the metal fill: white at the top through pink to gold at the foot
-  const top = y - size * type.capRatio;
-  const bottom = y + size * 0.2 + (lines.length - 1) * size * type.lineGap;
-  const fill = ctx.createLinearGradient(0, top, 0, Math.max(bottom, top + size));
-  const stops = preset.titleFill;
-  fill.addColorStop(0, stops[0]);
-  fill.addColorStop(0.36, stops[1]);
-  fill.addColorStop(0.74, stops[2]);
-  fill.addColorStop(1, stops[3]);
-  ctx.fillStyle = fill;
-  drawAll('fill', 0, 0);
+  // 6. the fills, one gradient per run: white at the cap line down to the run's own warm or cool foot.
+  const blockTop = y - size * type.capRatio;
+  for (const run of runs) {
+    const runTop = y + run.offset - size * type.capRatio;
+    const runBottom = y + run.offset + size * 0.16;
+    const grad = ctx.createLinearGradient(0, runTop, 0, runBottom);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.2, run.fill[0]);
+    grad.addColorStop(0.62, run.fill[1]);
+    grad.addColorStop(1, run.fill[2] ?? run.fill[1]);
+    ctx.fillStyle = grad;
+    drawTracked(ctx, run.text, run.x, y + run.offset, tracking, 'fill');
+  }
 
-  // 5. a highlight along the upper edge, and a warm bounce along the lower one
+  // 7. a neon edge — a screen pass along the rim, then a highlight along the upper edge and a warm bounce below.
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = 0.4;
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = preset.accentB;
+  ctx.lineWidth = Math.max(1.4, size * 0.02);
+  drawAll('stroke', -size * 0.008, -size * 0.014);
+  ctx.globalAlpha = 0.42;
   ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = Math.max(1, size * 0.011);
-  drawAll('stroke', -size * 0.005, -size * 0.012);
-  ctx.globalAlpha = 0.24;
+  ctx.lineWidth = Math.max(1, size * 0.012);
+  drawAll('stroke', -size * 0.005, -size * 0.016);
+  ctx.globalAlpha = 0.3;
   ctx.strokeStyle = preset.accentC;
-  ctx.lineWidth = Math.max(1, size * 0.018);
-  drawAll('stroke', size * 0.004, size * 0.014);
+  ctx.lineWidth = Math.max(1, size * 0.02);
+  drawAll('stroke', size * 0.005, size * 0.016);
+  ctx.restore();
+
+  // 7. specular break across the middle of the mark: a thin white slash, a printed highlight on the chrome.
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = 0.26;
+  ctx.fillStyle = '#ffffff';
+  const slashY = blockTop + size * type.capRatio * 0.62;
+  ctx.beginPath();
+  ctx.moveTo(x - size * 0.2, slashY + size * 0.1);
+  ctx.lineTo(x + type.widest + size * 0.3, slashY - size * 0.1);
+  ctx.lineTo(x + type.widest + size * 0.3, slashY - size * 0.03);
+  ctx.lineTo(x - size * 0.2, slashY + size * 0.17);
+  ctx.closePath();
+  ctx.fill();
   ctx.restore();
 
   ctx.restore();
@@ -1004,6 +1393,13 @@ export function renderCover(ctx, opts) {
   ctx.fillRect(plan.grid.x - plan.gutter, plan.grid.y - plan.gutter, plan.grid.w + plan.gutter * 2, plan.grid.h + plan.gutter * 2);
 
   const panels = opts.panels ?? [];
+  // The hero is the biggest cell: that is the print the composition is built around, and the one that gets the
+  // corner brackets and the white-hot inner rule.
+  let hero = 0;
+  plan.cells.forEach((cell, i) => {
+    const area = plan.cells[hero].w * plan.cells[hero].h;
+    if (cell.w * cell.h > area) hero = i;
+  });
   plan.cells.forEach((cell, i) => {
     const state = panels[i] ?? {};
     ctx.save();
@@ -1017,7 +1413,7 @@ export function renderCover(ctx, opts) {
       drawEmptyPanel(ctx, cell);
     }
     ctx.restore();
-    strokePanel(ctx, cell, preset);
+    strokePanel(ctx, cell, preset, i === hero);
     markPanel(ctx, cell, i, preset);
   });
 

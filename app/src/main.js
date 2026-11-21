@@ -72,6 +72,8 @@ const ui = {
   swapNext: el('swap-next'),
   resetCrop: el('reset-crop'),
   shuffle: el('shuffle'),
+  randomize: el('randomize'),
+  keys: el('keys'),
   status: el('status'),
   stageMeta: el('stage-meta'),
   wrap: el('canvas-wrap'),
@@ -520,16 +522,158 @@ function wire() {
   });
 
   ui.shuffle.addEventListener('click', () => {
-    const base = defaultPanelCrops();
-    state.panels.forEach((panel, i) => {
-      const seed = base[(i + 2) % base.length];
-      panel.zoom = Math.min(2.2, Math.max(0.98, seed.zoom + (Math.random() - 0.5) * 0.34));
-      panel.ox = Math.max(-0.8, Math.min(0.8, seed.ox + (Math.random() - 0.5) * 0.4));
-      panel.oy = Math.max(-0.8, Math.min(0.8, seed.oy + (Math.random() - 0.5) * 0.4));
-    });
-    syncPanelUi();
+    shuffleCrops();
     say('Fresh crops on every panel.', 'ok');
     queueDraw();
+  });
+
+  /**
+   * The one-button surprise: a new preset, a new panel count, a new frame and a fresh set of crops, drawn as one
+   * change so the poster that comes out is a coherent new shot rather than a permutation of the old one.
+   */
+  function randomizeAll() {
+    const pick = (n, not) => {
+      if (n <= 1) return 0;
+      let v = Math.floor(Math.random() * n);
+      if (v === not) v = (v + 1 + Math.floor(Math.random() * (n - 1))) % n;
+      return v;
+    };
+    state.preset = pick(PRESETS.length, state.preset);
+    state.count = PANEL_COUNTS[pick(PANEL_COUNTS.length, PANEL_COUNTS.indexOf(state.count))];
+    state.frame = FRAMES[pick(FRAMES.length, FRAMES.findIndex((f) => f.id === state.frame))].id;
+    state.selected = Math.min(state.selected, state.count - 1);
+    shuffleCrops(true);
+    syncAll();
+    fitStage();
+    queueDraw();
+    const preset = PRESETS[state.preset];
+    say(`Randomized: ${preset.name}, ${state.count} panels, ${state.frame} — ${preset.hint}.`, 'ok');
+  }
+
+  /** New crops on every panel: the default rhythm nudged, so the collage stays composed but never repeats. */
+  function shuffleCrops(strong = false) {
+    const base = defaultPanelCrops();
+    const swing = strong ? 0.6 : 0.4;
+    const zoomSwing = strong ? 0.5 : 0.34;
+    state.panels.forEach((panel, i) => {
+      const seed = base[(i + 2) % base.length];
+      panel.zoom = Math.min(2.2, Math.max(0.98, seed.zoom + (Math.random() - 0.5) * zoomSwing));
+      panel.ox = Math.max(-0.8, Math.min(0.8, seed.ox + (Math.random() - 0.5) * swing));
+      panel.oy = Math.max(-0.8, Math.min(0.8, seed.oy + (Math.random() - 0.5) * swing));
+    });
+    syncPanelUi();
+  }
+
+  function cyclePreset(step = 1) {
+    state.preset = (state.preset + step + PRESETS.length) % PRESETS.length;
+    syncAll();
+    say(`Preset: ${PRESETS[state.preset].name}.`, 'ok');
+    queueDraw();
+  }
+
+  function cycleFrame(step = 1) {
+    const at = FRAMES.findIndex((f) => f.id === state.frame);
+    state.frame = FRAMES[(at + step + FRAMES.length) % FRAMES.length].id;
+    syncAll();
+    fitStage();
+    queueDraw();
+    say(`Frame: ${state.frame}.`, 'ok');
+  }
+
+  function cycleCount(step) {
+    const at = PANEL_COUNTS.indexOf(state.count);
+    const next = PANEL_COUNTS[Math.max(0, Math.min(PANEL_COUNTS.length - 1, at + step))];
+    if (next === state.count) return;
+    state.count = next;
+    state.selected = Math.min(state.selected, state.count - 1);
+    syncAll();
+    queueDraw();
+    say(`${next} panels.`, 'ok');
+  }
+
+  function nudgeFont(step) {
+    state.fontScale = Math.max(55, Math.min(150, state.fontScale + step));
+    ui.font.value = String(state.fontScale);
+    ui.fontOut.textContent = `${state.fontScale}%`;
+    queueDraw();
+    say(`Title size: ${state.fontScale}%.`, '');
+  }
+
+  function toggleKeys() {
+    const folded = ui.keys.classList.toggle('folded');
+    say(folded ? 'Shortcut bar hidden — press ? to bring it back.' : 'Shortcut bar shown.', '');
+  }
+
+  ui.randomize.addEventListener('click', () => {
+    ui.randomize.classList.remove('spin');
+    // Restart the tumble on the die: drop the class, force a reflow, put it back.
+    void ui.randomize.offsetWidth;
+    ui.randomize.classList.add('spin');
+    randomizeAll();
+    setTimeout(() => ui.randomize.classList.remove('spin'), 480);
+  });
+
+  // The keyboard map, shown in the panel rail so nothing here is a hidden feature. Alt/⌘/Ctrl and typing in a
+  // field are both left alone: the shortcuts only fire on a bare key press.
+  window.addEventListener('keydown', (event) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const target = event.target;
+    if (target instanceof HTMLElement) {
+      const tag = target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) return;
+    }
+    if (event.key === '?') {
+      event.preventDefault();
+      toggleKeys();
+      return;
+    }
+    if (event.key >= '1' && event.key <= '6') {
+      const n = Number(event.key);
+      if (n <= state.count) {
+        state.selected = n - 1;
+        syncPanelUi();
+        syncChips();
+      }
+      return;
+    }
+    switch (event.key.toLowerCase()) {
+      case 'r':
+        event.preventDefault();
+        ui.randomize.click();
+        break;
+      case 'p':
+        event.preventDefault();
+        cyclePreset(1);
+        break;
+      case 'f':
+        event.preventDefault();
+        cycleFrame(1);
+        break;
+      case 'e':
+        event.preventDefault();
+        exportPng(state.frame);
+        break;
+      case '[':
+        event.preventDefault();
+        cycleCount(-1);
+        break;
+      case ']':
+        event.preventDefault();
+        cycleCount(1);
+        break;
+      case '+':
+      case '=':
+        event.preventDefault();
+        nudgeFont(6);
+        break;
+      case '-':
+      case '_':
+        event.preventDefault();
+        nudgeFont(-6);
+        break;
+      default:
+        break;
+    }
   });
 
   document.querySelectorAll('[data-export]').forEach((button) => {
@@ -616,17 +760,6 @@ async function boot() {
   } else {
     window.addEventListener('resize', fitStage);
   }
-  window.addEventListener('keydown', (event) => {
-    if (event.target instanceof HTMLInputElement) return;
-    if (event.key >= '1' && event.key <= '6') {
-      const n = Number(event.key);
-      if (n <= state.count) {
-        state.selected = n - 1;
-        syncPanelUi();
-        syncChips();
-      }
-    }
-  });
 }
 
 boot().catch((err) => {

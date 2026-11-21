@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vice Cover Studio — GTA-style cover maker</title>
+<!-- The favicon is inlined as a data URI: a request for /favicon.ico would be the app's only network call. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ff7a1f'/%3E%3Cstop offset='.5' stop-color='%23ff2fb0'/%3E%3Cstop offset='1' stop-color='%2322e8d8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='7' fill='%23071018'/%3E%3Ccircle cx='16' cy='13' r='7' fill='url(%23g)'/%3E%3Cg fill='%23071018'%3E%3Crect x='9' y='15' width='14' height='1.6'/%3E%3Crect x='9' y='18' width='14' height='2.2'/%3E%3Crect x='9' y='21.4' width='14' height='2.8'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -18,6 +20,10 @@
     </div>
     <div class="topbar-right">
       <span class="badge" title="No network, no build step, no libraries">STATIC · NO NETWORK</span>
+      <button class="randomize" id="randomize" type="button" title="Shuffle preset, layout and crops (R)">
+        <span class="dice" aria-hidden="true"></span>
+        <span>Randomize</span>
+      </button>
       <div class="exports" role="group" aria-label="Export PNG">
         <button class="export" data-export="1080x1080" type="button">PNG 1080²</button>
         <button class="export" data-export="1080x1350" type="button">PNG 1080×1350</button>
@@ -116,6 +122,17 @@
       <div class="stage-foot">
         <p>Export redraws the poster at full resolution and writes a real PNG — never an upscale.</p>
         <span class="stamp" aria-hidden="true">MADE OFFLINE</span>
+      </div>
+      <div class="keybar" id="keys" aria-label="Keyboard shortcuts">
+        <span class="keybar-label">Keys</span>
+        <span class="key"><kbd>R</kbd> randomize</span>
+        <span class="key"><kbd>1</kbd>–<kbd>6</kbd> panel</span>
+        <span class="key"><kbd>P</kbd> preset</span>
+        <span class="key"><kbd>F</kbd> frame</span>
+        <span class="key"><kbd>[</kbd><kbd>]</kbd> panels</span>
+        <span class="key"><kbd>+</kbd><kbd>−</kbd> title</span>
+        <span class="key"><kbd>E</kbd> export</span>
+        <span class="key"><kbd>?</kbd> hide</span>
       </div>
     </section>
   </main>
