@@ -1,1437 +1,924 @@
-// VICE COVER STUDIO — the poster renderer.
+// Neon Coast Cover Studio — the poster renderer.
 //
-// One function, renderCover(ctx, opts), paints a whole GTA-poster cover into any 2D context at any size.
-// Everything is laid out in "design units" on a 1080-unit-wide basis and then scaled by the context at the
-// end, so a 1080x1080 preview, a 1080x1350 print and a 1920x1080 frame all share one geometry: the taller
-// (or shorter) the canvas, the more (or less) vertical room the panel grid gets, and the type re-fits itself.
-//
-// The look is built in layers, back to front: a Venetian-sunset backdrop, the panel grid (each panel a photo
-// cropped and graded on its own), a global colour grade (sunset gradient, flare, bloom), the title band with
-// its lettering, then the film finish (vignette, grain, scanlines, frame). No libraries, no network, no fonts
-// beyond what the machine already has.
+// Everything here is hand-written Canvas 2D: no library, no image asset, no
+// network call. renderCover() paints one cover onto a 2D context at whatever
+// pixel size the canvas carries: every measurement is a fraction of the canvas,
+// so the same call draws a 1080 x 1080 square, a 1080 x 1350 portrait and a
+// 1920 x 1080 wide cover with the same composition.
 
-/** The width every coordinate in this file is written against. */
 export const DESIGN_WIDTH = 1080;
-
-/** The panel counts the maker offers. */
 export const PANEL_COUNTS = [2, 3, 4, 5, 6];
-
-/** The most panels a poster can hold (panel state is kept for all of them). */
 export const MAX_PANELS = 6;
 
-/**
- * The colour presets. Each is a complete grade: backdrop, panel wash, title fill, flare and ink. `sky` is the
- * full-canvas sunset gradient (top, middle, bottom), laid over the panels in 'overlay' and 'screen' passes.
- */
+// The post sizes the studio exports, largest side first in the label.
+export const FRAMES = [
+  { id: '1:1', name: 'Square', w: 1080, h: 1080, note: '1080 x 1080 · feed' },
+  { id: '4:5', name: 'Portrait', w: 1080, h: 1350, note: '1080 x 1350 · poster' },
+  { id: '16:9', name: 'Wide', w: 1920, h: 1080, note: '1920 x 1080 · header' },
+];
+
+// Five grades. `band` is the title band's gradient, `sky` the backdrop's, and
+// `tint` the wash laid over the photo grid so five different photos still read
+// as one poster.
 export const PRESETS = [
   {
     id: 'vice',
     name: 'Vice Sunset',
-    hint: 'teal sky / tangerine sun',
-    swatch: ['#ff7a1f', '#22e8d8', '#ffd08a'],
-    backdrop: ['#052732', '#0b5b63', '#170711'],
-    gutter: '#03151b',
-    ink: ['#06303a', '#03101a'],
-    accentA: '#ff7a1f',
-    accentB: '#22e8d8',
-    accentC: '#ffc46b',
-    washTop: 'rgba(0, 214, 200, 0.5)',
-    washBottom: 'rgba(255, 126, 32, 0.58)',
-    washDeep: 'rgba(6, 58, 66, 0.45)',
-    sky: ['rgba(0, 206, 200, 0.55)', 'rgba(255, 150, 60, 0.26)', 'rgba(255, 112, 26, 0.62)'],
-    sun: 'rgba(255, 238, 196, 1)',
-    rayColor: 'rgba(255, 172, 88, 1)',
-    titleFill: ['#ffffff', '#ffe9c8', '#ffab5e', '#ff6a1f'],
-    titleOutline: '#04222a',
-    titleEdge: '#0b4d55',
-    bandLine: 'rgba(255, 140, 60, 0.8)',
+    hint: 'orange sky, teal water',
+    swatch: ['#ff8a3d', '#ffd9a0', '#12b3b8', '#2a1230'],
+    backdrop: ['#2a0f33', '#5c1a4a', '#c9412f', '#f0803a'],
+    sky: ['#ffd9a0', '#ff9c4d', '#e2543f'],
+    sun: '#ffe6b0',
+    glow: 'rgba(255,150,70,0.55)',
+    tint: ['rgba(255,120,60,0.30)', 'rgba(20,150,170,0.24)'],
+    duo: ['#3a1a4e', '#a8442e', '#2a8f9e'],
+    band: ['#120616', '#2a0a2c'],
+    inkA: ['#fff3d6', '#ffb347'],
+    inkB: ['#ffe9f3', '#ff5fa8'],
+    stroke: '#150612',
+    accent: '#37d6d0',
+    accent2: '#ffb03a',
   },
   {
     id: 'neon',
     name: 'Neon Night',
-    hint: 'hot pink / electric cyan',
-    swatch: ['#ff2fb0', '#22f0ff', '#8a5cff'],
-    backdrop: ['#0a0526', '#2c0a4c', '#04020f'],
-    gutter: '#050214',
-    ink: ['#0d0730', '#04020f'],
-    accentA: '#ff2fb0',
-    accentB: '#22f0ff',
-    accentC: '#ff8ad8',
-    washTop: 'rgba(255, 47, 176, 0.55)',
-    washBottom: 'rgba(34, 240, 255, 0.5)',
-    washDeep: 'rgba(28, 6, 70, 0.45)',
-    sky: ['rgba(120, 20, 170, 0.6)', 'rgba(255, 47, 176, 0.3)', 'rgba(34, 240, 255, 0.46)'],
-    sun: 'rgba(255, 196, 244, 1)',
-    rayColor: 'rgba(255, 62, 196, 1)',
-    titleFill: ['#ffffff', '#ffe3f6', '#ff8ad8', '#22f0ff'],
-    titleOutline: '#08031c',
-    titleEdge: '#2a1268',
-    bandLine: 'rgba(34, 240, 255, 0.8)',
+    hint: 'hot pink, cyan, wet street',
+    swatch: ['#ff2f87', '#8a3bff', '#25e5ff', '#0b0620'],
+    backdrop: ['#07061a', '#141033', '#3a1050', '#6a1250'],
+    sky: ['#25e5ff', '#8a3bff', '#ff2f87'],
+    sun: '#ffd6f4',
+    glow: 'rgba(255,60,150,0.5)',
+    tint: ['rgba(255,45,130,0.30)', 'rgba(35,225,255,0.26)'],
+    duo: ['#2a1560', '#7a1f6a', '#1f6f8f'],
+    band: ['#05030f', '#140a26'],
+    inkA: ['#eafcff', '#3fe6ff'],
+    inkB: ['#fff0f7', '#ff3d8f'],
+    stroke: '#080413',
+    accent: '#25e5ff',
+    accent2: '#ff3d8f',
+  },
+  {
+    id: 'dusk',
+    name: 'Gold Dusk',
+    hint: 'amber light, dusty gold',
+    swatch: ['#ffc247', '#ffe9b0', '#b5642a', '#241206'],
+    backdrop: ['#1d1008', '#48230f', '#8a441d', '#c8792e'],
+    sky: ['#ffe9b0', '#ffc247', '#c2702a'],
+    sun: '#fff2cc',
+    glow: 'rgba(255,196,80,0.5)',
+    tint: ['rgba(255,190,90,0.28)', 'rgba(150,70,30,0.26)'],
+    duo: ['#3a2410', '#8a5a24', '#5a4326'],
+    band: ['#120b05', '#2a1508'],
+    inkA: ['#fff6df', '#ffc247'],
+    inkB: ['#ffe8c8', '#f08a2e'],
+    stroke: '#150b04',
+    accent: '#ffc247',
+    accent2: '#f08a2e',
+  },
+  {
+    id: 'midnight',
+    name: 'Midnight Violet',
+    hint: 'deep purple, cold blue',
+    swatch: ['#7a5cff', '#c9a7ff', '#4fc2ff', '#08061a'],
+    backdrop: ['#05040f', '#100a2a', '#2a1550', '#45207a'],
+    sky: ['#c9a7ff', '#7a5cff', '#3a1f6a'],
+    sun: '#e8dcff',
+    glow: 'rgba(140,110,255,0.45)',
+    tint: ['rgba(120,90,255,0.28)', 'rgba(60,200,255,0.20)'],
+    duo: ['#131a4a', '#3d2a6e', '#1d4a7a'],
+    band: ['#04030c', '#0f0a22'],
+    inkA: ['#f2ecff', '#b79bff'],
+    inkB: ['#e9f6ff', '#67c8ff'],
+    stroke: '#05030f',
+    accent: '#b79bff',
+    accent2: '#67c8ff',
   },
   {
     id: 'heat',
-    name: 'Blood Orange',
-    hint: 'scarlet / gold / smoke',
-    swatch: ['#ff3b30', '#ffa000', '#ff7a59'],
-    backdrop: ['#2a0703', '#611204', '#140301'],
-    gutter: '#0d0201',
-    ink: ['#2b0a06', '#0c0201'],
-    accentA: '#ff4a2e',
-    accentB: '#ffb01f',
-    accentC: '#ff8f6b',
-    washTop: 'rgba(255, 74, 46, 0.55)',
-    washBottom: 'rgba(255, 176, 31, 0.5)',
-    washDeep: 'rgba(74, 8, 4, 0.45)',
-    sky: ['rgba(96, 10, 4, 0.62)', 'rgba(255, 74, 46, 0.30)', 'rgba(255, 170, 60, 0.55)'],
-    sun: 'rgba(255, 226, 160, 1)',
-    rayColor: 'rgba(255, 150, 70, 1)',
-    titleFill: ['#fffdf6', '#ffe9c9', '#ffb265', '#ff6a3d'],
-    titleOutline: '#1a0400',
-    titleEdge: '#5c1203',
-    bandLine: 'rgba(255, 120, 60, 0.8)',
-  },
-  {
-    id: 'chrome',
-    name: 'Chrome Dusk',
-    hint: 'ice blue / mauve / silver',
-    swatch: ['#9fb7ff', '#d9e6ff', '#ff7ad9'],
-    backdrop: ['#0a1220', '#20243e', '#06080f'],
-    gutter: '#04060b',
-    ink: ['#101828', '#05070d'],
-    accentA: '#ff7ad9',
-    accentB: '#a9c6ff',
-    accentC: '#eaf1ff',
-    washTop: 'rgba(120, 160, 255, 0.5)',
-    washBottom: 'rgba(255, 122, 217, 0.42)',
-    washDeep: 'rgba(10, 22, 44, 0.5)',
-    sky: ['rgba(26, 44, 86, 0.66)', 'rgba(190, 140, 220, 0.22)', 'rgba(255, 150, 200, 0.34)'],
-    sun: 'rgba(236, 246, 255, 1)',
-    rayColor: 'rgba(170, 200, 255, 1)',
-    titleFill: ['#ffffff', '#eef3ff', '#c3d3ff', '#ffb3e4'],
-    titleOutline: '#050810',
-    titleEdge: '#232c4d',
-    bandLine: 'rgba(170, 200, 255, 0.8)',
-  },
-  {
-    id: 'acid',
-    name: 'Acid Wave',
-    hint: 'lime / teal / hot pink',
-    swatch: ['#b6ff3d', '#00f5c4', '#ff2d95'],
-    backdrop: ['#04180f', '#0d3a2a', '#020a06'],
-    gutter: '#020805',
-    ink: ['#06231a', '#020906'],
-    accentA: '#b6ff3d',
-    accentB: '#00f5c4',
-    accentC: '#ff2d95',
-    washTop: 'rgba(0, 245, 196, 0.45)',
-    washBottom: 'rgba(182, 255, 61, 0.4)',
-    washDeep: 'rgba(4, 44, 30, 0.45)',
-    sky: ['rgba(4, 52, 36, 0.66)', 'rgba(0, 245, 196, 0.22)', 'rgba(182, 255, 61, 0.42)'],
-    sun: 'rgba(226, 255, 190, 1)',
-    rayColor: 'rgba(120, 255, 200, 1)',
-    titleFill: ['#ffffff', '#eaffd6', '#b6ff3d', '#39f5d0'],
-    titleOutline: '#02110a',
-    titleEdge: '#0c3c2a',
-    bandLine: 'rgba(120, 255, 200, 0.8)',
+    name: 'Heat Red',
+    hint: 'ember red, scorched cream',
+    swatch: ['#ff3b2f', '#ffb38a', '#ffd166', '#1a0505'],
+    backdrop: ['#160303', '#3c0708', '#7d1410', '#b32a15'],
+    sky: ['#ffd166', '#ff6a3d', '#b3261e'],
+    sun: '#ffe0a8',
+    glow: 'rgba(255,90,50,0.5)',
+    tint: ['rgba(255,70,40,0.30)', 'rgba(255,180,90,0.20)'],
+    duo: ['#4a1008', '#8f2a12', '#6a2410'],
+    band: ['#0d0202', '#240707'],
+    inkA: ['#fff1dc', '#ff9a5c'],
+    inkB: ['#ffd9c7', '#ff3b2f'],
+    stroke: '#120202',
+    accent: '#ffd166',
+    accent2: '#ff3b2f',
   },
 ];
 
-/** A font stack of narrow, heavy faces that ship with desktop Linux, macOS and Windows; no download. */
-const TITLE_FONT = "'Liberation Sans Narrow', 'Arial Narrow', 'Nimbus Sans Narrow', 'Helvetica Neue Condensed', 'Roboto Condensed', Impact, sans-serif";
-/** Small caps and labels. */
-const LABEL_FONT = "'Liberation Sans', 'Helvetica Neue', Arial, 'DejaVu Sans', sans-serif";
-/** The technical line under the title. */
-const MONO_FONT = "'DejaVu Sans Mono', 'Liberation Mono', 'Courier New', monospace";
+export function presetById(id) {
+  return PRESETS.find((p) => p.id === id) ?? PRESETS[0];
+}
 
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+// A cell is [x, y, w, h] as fractions of the canvas. The hero (the first cell)
+// is always the largest, and each count has a rhythm of its own rather than a
+// uniform grid, which is what makes the poster read as a cover and not a
+// contact sheet.
+const LAYOUTS = {
+  2: {
+    portrait: [[0, 0, 1, 0.6], [0, 0.6, 1, 0.4]],
+    wide: [[0, 0, 0.62, 1], [0.62, 0, 0.38, 1]],
+  },
+  3: {
+    portrait: [[0, 0, 1, 0.52], [0, 0.52, 0.5, 0.48], [0.5, 0.52, 0.5, 0.48]],
+    wide: [[0, 0, 0.56, 1], [0.56, 0, 0.44, 0.5], [0.56, 0.5, 0.44, 0.5]],
+  },
+  4: {
+    portrait: [[0, 0, 1, 0.46], [0, 0.46, 0.5, 0.27], [0, 0.73, 0.5, 0.27], [0.5, 0.46, 0.5, 0.54]],
+    wide: [[0, 0, 0.58, 1], [0.58, 0, 0.42, 0.34], [0.58, 0.34, 0.42, 0.33], [0.58, 0.67, 0.42, 0.33]],
+  },
+  5: {
+    portrait: [[0, 0, 1, 0.42], [0, 0.42, 0.5, 0.26], [0.5, 0.42, 0.5, 0.26], [0, 0.68, 0.5, 0.32], [0.5, 0.68, 0.5, 0.32]],
+    wide: [[0, 0, 0.54, 1], [0.54, 0, 0.46, 0.34], [0.54, 0.34, 0.23, 0.33], [0.77, 0.34, 0.23, 0.33], [0.54, 0.67, 0.46, 0.33]],
+  },
+  6: {
+    portrait: [[0, 0, 1, 0.34], [0, 0.34, 0.34, 0.24], [0.34, 0.34, 0.33, 0.24], [0.67, 0.34, 0.33, 0.24],
+      [0, 0.58, 0.5, 0.42], [0.5, 0.58, 0.5, 0.42]],
+    wide: [[0, 0, 0.5, 0.62], [0.5, 0, 0.25, 0.31], [0.75, 0, 0.25, 0.31], [0.5, 0.31, 0.25, 0.31],
+      [0.75, 0.31, 0.25, 0.31], [0, 0.62, 1, 0.38]],
+  },
+};
 
-/** A tiny seeded PRNG so the grain is identical on every render. */
-function mulberry32(seed) {
+/** Cells for `count` panels; `aspect` is width / height of the canvas. */
+export function panelCells(count, aspect) {
+  const n = Math.min(MAX_PANELS, Math.max(2, count));
+  const table = LAYOUTS[n] ?? LAYOUTS[4];
+  const cells = aspect >= 1.25 ? table.wide : table.portrait;
+  if (n === 6 && aspect >= 1.25) return cells.slice();
+  return cells.slice();
+}
+
+/** Restarting crops so every panel opens on a different part of the photo.
+    `photo` alternates so neighbouring panels never show the same frame. */
+export function defaultCrops(count) {
+  const seeds = [
+    [1.06, 0, -0.04], [1.22, -0.10, 0.10], [1.16, 0.12, 0.06],
+    [1.30, 0.06, -0.12], [1.12, -0.14, -0.08], [1.24, 0.02, 0.14],
+  ];
+  return Array.from({ length: MAX_PANELS }, (_, i) => {
+    const s = seeds[i % seeds.length];
+    return { zoom: s[0], offsetX: s[1], offsetY: s[2], photo: i, auto: true };
+  }).slice(0, Math.max(2, count));
+}
+
+// ---------------------------------------------------------------------------
+// Small drawing helpers
+// ---------------------------------------------------------------------------
+
+const FONT_TITLE = "'Anton','Arial Narrow','Liberation Sans Narrow',Impact,sans-serif";
+const FONT_SCRIPT = "'Pacifico','Brush Script MT',cursive";
+const FONT_UI = "'Liberation Sans','DejaVu Sans',system-ui,sans-serif";
+const FONT_MONO = "'DejaVu Sans Mono','Liberation Mono',monospace";
+
+function clamp(v, lo, hi) {
+  return Math.min(hi, Math.max(lo, v));
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.lineTo(x + w - rr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+  ctx.lineTo(x + w, y + h - rr);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+  ctx.lineTo(x + rr, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+  ctx.lineTo(x, y + rr);
+  ctx.quadraticCurveTo(x, y, x + rr, y);
+  ctx.closePath();
+}
+
+/** Seeded PRNG (mulberry32) so a poster is byte-identical on every repaint. */
+function rng(seed) {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
-let noiseTile = null;
-/** A 192-square film-grain tile: grey noise that an 'overlay' pass turns into texture without shifting colour. */
-function noisePattern(ctx) {
-  if (noiseTile === null) {
-    const size = 192;
-    const tile = document.createElement('canvas');
-    tile.width = size;
-    tile.height = size;
-    const tctx = tile.getContext('2d');
-    const data = tctx.createImageData(size, size);
-    const rnd = mulberry32(0x5eed1e);
-    for (let i = 0; i < size * size; i++) {
-      const v = 128 + (rnd() * 2 - 1) * 96;
-      data.data[i * 4] = v;
-      data.data[i * 4 + 1] = v;
-      data.data[i * 4 + 2] = v;
-      data.data[i * 4 + 3] = 255;
+/** Draws `img` into the rect with cover fit plus the panel's own zoom/offset.
+    An auto crop biases a portrait photo in a wide panel toward its upper half,
+    where faces usually are, so the hero panel does not open on a chin. */
+function drawCoverFit(ctx, img, x, y, w, h, crop) {
+  const iw = img.naturalWidth || img.width;
+  const ih = img.naturalHeight || img.height;
+  if (!iw || !ih) return;
+  const zoom = crop?.zoom ?? 1;
+  const base = Math.max(w / iw, h / ih);
+  const s = base * zoom;
+  const dw = iw * s;
+  const dh = ih * s;
+  const bias = crop?.auto && ih / iw > 1.1 && w / h > 1.1 ? 0.14 : 0;
+  const ox = (crop?.offsetX ?? 0) * w * 0.5;
+  const oy = ((crop?.offsetY ?? 0) + bias) * h * 0.5;
+  const dx = x + (w - dw) / 2 + ox;
+  const dy = y + (h - dh) / 2 + oy;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.drawImage(img, dx, dy, dw, dh);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
+// Backdrop: sky, sun, rays, stars, horizon haze
+// ---------------------------------------------------------------------------
+
+function drawBackdrop(ctx, W, H, p, seed) {
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, p.backdrop[0]);
+  sky.addColorStop(0.42, p.backdrop[1]);
+  sky.addColorStop(0.78, p.backdrop[2]);
+  sky.addColorStop(1, p.backdrop[3]);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W * 0.5;
+  const cy = H * 0.46;
+  const r = Math.min(W, H) * 0.21;
+
+  // Rays: wedges alternating on/off around the sun, drawn before the disc.
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.globalCompositeOperation = 'screen';
+  const rays = 26;
+  for (let i = 0; i < rays; i += 1) {
+    if (i % 2 === 1) continue;
+    const a0 = (i / rays) * Math.PI * 2;
+    const a1 = a0 + (Math.PI * 2) / rays * 0.52;
+    const len = Math.max(W, H) * (0.9 + ((i * 37) % 11) / 22);
+    const g = ctx.createLinearGradient(0, 0, Math.cos(a0) * len, Math.sin(a0) * len);
+    g.addColorStop(0, p.glow);
+    g.addColorStop(0.45, 'rgba(255,255,255,0.05)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(a0) * len, Math.sin(a0) * len);
+    ctx.lineTo(Math.cos(a1) * len, Math.sin(a1) * len);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Bloom, then the disc.
+  const bloom = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r * 3.1);
+  bloom.addColorStop(0, p.glow);
+  bloom.addColorStop(0.35, 'rgba(255,255,255,0.10)');
+  bloom.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = bloom;
+  ctx.fillRect(0, 0, W, H);
+
+  const disc = ctx.createLinearGradient(0, cy - r, 0, cy + r);
+  disc.addColorStop(0, '#ffffff');
+  disc.addColorStop(0.35, p.sun);
+  disc.addColorStop(1, p.sky[2]);
+  ctx.fillStyle = disc;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Retro sun slits across the lower half of the disc.
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 7; i += 1) {
+    const y = cy + r * 0.05 + i * r * 0.14;
+    const hh = r * (0.012 + i * 0.012);
+    ctx.fillRect(cx - r, y, r * 2, hh);
+  }
+  ctx.restore();
+
+  // Stars: only above the sun, seeded so they never dance between repaints.
+  const rand = rng(seed);
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 90; i += 1) {
+    const x = rand() * W;
+    const y = rand() * H * 0.5;
+    const rr = 0.4 + rand() * 1.4;
+    ctx.globalAlpha = 0.10 + rand() * 0.35;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x, y, rr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Horizon haze where the sun meets the grid.
+  const haze = ctx.createLinearGradient(0, H * 0.5, 0, H * 0.92);
+  haze.addColorStop(0, 'rgba(255,255,255,0)');
+  haze.addColorStop(0.55, p.glow);
+  haze.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
+// The photo grid
+// ---------------------------------------------------------------------------
+
+function drawPanels(ctx, W, H, opts, p) {
+  const { photos, panels, count, aspect, gridTop, gridBottom } = opts;
+  const cells = panelCells(count, aspect);
+  const gy = gridTop * H;
+  const gh = (gridBottom - gridTop) * H;
+  const gutter = Math.max(2, Math.min(W, H) * 0.0075);
+  const drawn = [];
+
+  for (let i = 0; i < cells.length; i += 1) {
+    const [fx, fy, fw, fh] = cells[i];
+    const x = fx * W + gutter / 2;
+    const y = gy + fy * gh + gutter / 2;
+    const w = fw * W - gutter;
+    const h = fh * gh - gutter;
+    drawn.push({ x, y, w, h, hero: i === 0 });
+  }
+
+  // A dark key under the whole grid, so bright photos do not blow out.
+  ctx.save();
+  ctx.fillStyle = 'rgba(8,4,12,0.55)';
+  ctx.fillRect(0, gy, W, gh);
+
+  drawn.forEach((cell, i) => {
+    const { x, y, w, h } = cell;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+
+    const img = photos.length ? photos[(panels[i]?.photo ?? i) % photos.length] : null;
+    if (img) {
+      const crop = panels[i] ?? { zoom: 1, offsetX: 0, offsetY: 0 };
+      drawCoverFit(ctx, img, x, y, w, h, crop);
+    } else {
+      const g = ctx.createLinearGradient(x, y, x + w, y + h);
+      g.addColorStop(0, p.backdrop[1]);
+      g.addColorStop(1, p.backdrop[3]);
+      ctx.fillStyle = g;
+      ctx.fillRect(x, y, w, h);
     }
-    tctx.putImageData(data, 0, 0);
-    noiseTile = tile;
-  }
-  return ctx.createPattern(noiseTile, 'repeat');
+
+    // Grade each panel: a cool wash in multiply, then a warm one screened back.
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = p.tint[1];
+    ctx.fillRect(x, y, w, h);
+    ctx.globalCompositeOperation = 'screen';
+    const warm = ctx.createLinearGradient(x, y + h, x, y);
+    warm.addColorStop(0, p.tint[0]);
+    warm.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = warm;
+    ctx.fillRect(x, y, w, h);
+
+    // Duotone: one hue family per preset, so a photo taken on a phone sits
+    // beside a beach shot without fighting it. `color` keeps every luminance.
+    ctx.globalCompositeOperation = 'color';
+    const duo = ctx.createLinearGradient(x, y, x + w, y + h);
+    duo.addColorStop(0, p.duo[0]);
+    duo.addColorStop(0.55, p.duo[1]);
+    duo.addColorStop(1, p.duo[2]);
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = duo;
+    ctx.fillRect(x, y, w, h);
+    ctx.globalAlpha = 1;
+
+    // Slight desaturation keeps five photos in one family.
+    ctx.globalCompositeOperation = 'saturation';
+    ctx.fillStyle = 'rgba(80,80,80,0.30)';
+    ctx.fillRect(x, y, w, h);
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Inner shadow at the panel edges.
+    const edge = ctx.createLinearGradient(x, y + h, x, y + h * 0.55);
+    edge.addColorStop(0, 'rgba(0,0,0,0.45)');
+    edge.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = edge;
+    ctx.fillRect(x, y, w, h);
+
+    // Thin bright rule inset in every panel; a heavier one on the hero.
+    ctx.strokeStyle = 'rgba(255,255,255,0.42)';
+    ctx.lineWidth = Math.max(1, Math.min(w, h) * 0.004);
+    const in2 = Math.min(w, h) * 0.028;
+    ctx.strokeRect(x + in2, y + in2, w - in2 * 2, h - in2 * 2);
+
+    // Ink: a heavy dark outline just inside the cell edge, the poster's own
+    // drawing line, so a photo panel reads as printed rather than pasted.
+    const inkW = Math.max(2, Math.min(w, h) * 0.016);
+    ctx.strokeStyle = 'rgba(10,4,12,0.85)';
+    ctx.lineWidth = inkW;
+    ctx.strokeRect(x + inkW / 2, y + inkW / 2, w - inkW, h - inkW);
+
+    // Halftone dots over the hero's lower third: a printed-poster tell that
+    // costs nothing and hides a soft photo edge.
+    if (cell.hero) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.globalAlpha = 0.18;
+      const step = Math.max(5, Math.min(w, h) * 0.017);
+      ctx.fillStyle = '#1a0a14';
+      for (let dy = y + h * 0.55; dy < y + h; dy += step) {
+        for (let dx = x + step / 2; dx < x + w; dx += step) {
+          const t = (dy - (y + h * 0.55)) / (h * 0.45);
+          ctx.beginPath();
+          ctx.arc(dx, dy, step * 0.22 * (0.4 + t), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+
+    if (cell.hero) {
+      // Corner brackets on the hero only.
+      const len = Math.min(w, h) * 0.12;
+      const t = Math.max(2, Math.min(w, h) * 0.011);
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = t;
+      ctx.lineCap = 'square';
+      const b = in2 * 0.62;
+      const corners = [[x + b, y + b, 1, 1], [x + w - b, y + b, -1, 1],
+        [x + b, y + h - b, 1, -1], [x + w - b, y + h - b, -1, -1]];
+      corners.forEach(([cxp, cyp, sx, sy]) => {
+        ctx.beginPath();
+        ctx.moveTo(cxp + sx * len, cyp);
+        ctx.lineTo(cxp, cyp);
+        ctx.lineTo(cxp, cyp + sy * len);
+        ctx.stroke();
+      });
+    }
+    ctx.restore();
+
+    // Index numeral in the panel's foot corner, monospace, small.
+    ctx.save();
+    const fs = clamp(Math.min(w, h) * 0.062, 9, 26);
+    ctx.font = `${fs}px ${FONT_MONO}`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillText(String(i + 1).padStart(2, '0'), x + w - fs * 0.9, y + h - fs * 0.7);
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillText(String(i + 1).padStart(2, '0'), x + w - fs * 1.0, y + h - fs * 0.8);
+    ctx.restore();
+  });
+  ctx.restore();
+  return drawn;
 }
 
-let scanTile = null;
-/** A 3-unit scanline tile: one dark row, two clear ones. */
-function scanPattern(ctx) {
-  if (scanTile === null) {
-    const tile = document.createElement('canvas');
-    tile.width = 3;
-    tile.height = 3;
-    const tctx = tile.getContext('2d');
-    tctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    tctx.fillRect(0, 0, 3, 1);
-    scanTile = tile;
-  }
-  return ctx.createPattern(scanTile, 'repeat');
+// ---------------------------------------------------------------------------
+// Global grade over the grid: sky tint, anamorphic streak, diagonal flare
+// ---------------------------------------------------------------------------
+
+function drawGrade(ctx, W, H, opts, p, sunPos) {
+  const { gridTop, gridBottom } = opts;
+  const gy = gridTop * H;
+  const gh = (gridBottom - gridTop) * H;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, gy, W, gh);
+  ctx.clip();
+
+  ctx.globalCompositeOperation = 'overlay';
+  const sky = ctx.createLinearGradient(0, gy, 0, gy + gh);
+  sky.addColorStop(0, p.sky[0]);
+  sky.addColorStop(0.55, p.sky[1]);
+  sky.addColorStop(1, p.sky[2]);
+  ctx.globalAlpha = 0.30;
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, gy, W, gh);
+
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = 0.16;
+  const up = ctx.createLinearGradient(0, gy + gh, 0, gy);
+  up.addColorStop(0, p.sky[2]);
+  up.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = up;
+  ctx.fillRect(0, gy, W, gh);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // Anamorphic streak through the sun, laid across the whole width.
+  const sy = sunPos.y;
+  const streak = ctx.createLinearGradient(0, sy - H * 0.02, 0, sy + H * 0.02);
+  streak.addColorStop(0, 'rgba(255,255,255,0)');
+  streak.addColorStop(0.42, p.glow);
+  streak.addColorStop(0.5, 'rgba(255,255,255,0.55)');
+  streak.addColorStop(0.58, p.glow);
+  streak.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = streak;
+  ctx.fillRect(0, sy - H * 0.02, W, H * 0.04);
+  ctx.restore();
+
+  // Diagonal flare: two soft beams crossing the poster.
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.translate(sunPos.x, sy);
+  ctx.rotate(-0.33);
+  const beam = ctx.createLinearGradient(-W, 0, W, 0);
+  beam.addColorStop(0, 'rgba(255,255,255,0)');
+  beam.addColorStop(0.5, p.glow);
+  beam.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = beam;
+  ctx.globalAlpha = 0.30;
+  ctx.fillRect(-W, -H * 0.055, W * 2, H * 0.11);
+  ctx.globalAlpha = 0.16;
+  ctx.fillRect(-W, -H * 0.21, W * 2, H * 0.05);
+  ctx.restore();
 }
 
-/** The starting crop for each panel slot: varied zooms and offsets so a fresh poster already reads as a collage. */
-export function defaultPanelCrops() {
-  return [
-    { zoom: 1.16, ox: 0.05, oy: -0.12 },
-    { zoom: 1.02, ox: -0.08, oy: 0.06 },
-    { zoom: 1.34, ox: 0.12, oy: 0.16 },
-    { zoom: 1.08, ox: -0.16, oy: -0.05 },
-    { zoom: 1.26, ox: 0.2, oy: 0.1 },
-    { zoom: 0.98, ox: 0, oy: 0 },
-  ];
-}
+// ---------------------------------------------------------------------------
+// The title band: subtitle, two-tone wordmark, VI colophon, tech line
+// ---------------------------------------------------------------------------
 
-/**
- * The cells a poster of `count` panels is cut into, as fractions of the grid rectangle.
- * The rhythm is the one the old GTA covers use: one hero print with the rest of the contact sheet packed
- * around it, so the montage has a focal point instead of reading as equal tiles.
- */
-export function panelCells(count, aspect) {
-  const tall = aspect < 0.94;
-  if (count <= 2) {
-    return tall
-      ? [[0, 0, 1, 0.52], [0, 0.52, 1, 0.48]]
-      : [[0, 0, 0.52, 1], [0.52, 0, 0.48, 1]];
-  }
-  if (count === 3) {
-    // Hero left, two stacked right.
-    return tall
-      ? [[0, 0, 1, 0.46], [0, 0.46, 0.5, 0.54], [0.5, 0.46, 0.5, 0.54]]
-      : [[0, 0, 0.62, 1], [0.62, 0, 0.38, 0.5], [0.62, 0.5, 0.38, 0.5]];
-  }
-  if (count === 4) {
-    // Hero left, three stacked right: the classic case-and-poster shape. On a tall frame the hero leads and
-    // the other three sit in a row across the foot.
-    return tall
-      ? [[0, 0, 1, 0.42], [0, 0.42, 1 / 3, 0.58], [1 / 3, 0.42, 1 / 3, 0.58], [2 / 3, 0.42, 1 / 3, 0.58]]
-      : [[0, 0, 0.58, 1], [0.58, 0, 0.42, 1 / 3], [0.58, 1 / 3, 0.42, 1 / 3], [0.58, 2 / 3, 0.42, 1 / 3]];
-  }
-  if (count === 5) {
-    // Hero left with two companions stacked beside it, then a full-width pair across the foot.
-    return tall
-      ? [[0, 0, 0.62, 0.52], [0.62, 0, 0.38, 0.26], [0.62, 0.26, 0.38, 0.26], [0, 0.52, 0.5, 0.48], [0.5, 0.52, 0.5, 0.48]]
-      : [[0, 0, 0.5, 1], [0.5, 0, 0.25, 1], [0.75, 0, 0.25, 1 / 3], [0.75, 1 / 3, 0.25, 1 / 3], [0.75, 2 / 3, 0.25, 1 / 3]];
-  }
-  if (tall) {
-    // Six on a tall frame: a hero block, two companions beside it, three across the foot.
-    return [
-      [0, 0, 0.5, 0.54],
-      [0.5, 0, 0.25, 0.27],
-      [0.75, 0, 0.25, 0.27],
-      [0.5, 0.27, 0.5, 0.27],
-      [0, 0.54, 0.5, 0.46],
-      [0.5, 0.54, 0.5, 0.46],
-    ];
-  }
-  return [
-    [0, 0, 0.5, 0.5],
-    [0.5, 0, 0.25, 0.5],
-    [0.75, 0, 0.25, 0.5],
-    [0, 0.5, 0.25, 0.5],
-    [0.25, 0.5, 0.25, 0.5],
-    [0.5, 0.5, 0.5, 0.5],
-  ];
-}
-
-// ---------------------------------------------------------------- type
-
-/** Width of a string drawn with manual tracking (letter-spacing), which is what the display type uses. */
-function trackedWidth(ctx, text, tracking) {
-  let w = 0;
-  for (const ch of text) w += ctx.measureText(ch).width + tracking;
-  return Math.max(0, w - (text.length > 0 ? tracking : 0));
-}
-
-/** Draws a string one glyph at a time so tracking is exact, in fill or stroke mode. */
-function drawTracked(ctx, text, x, y, tracking, mode) {
-  let cx = x;
-  for (const ch of text) {
-    if (mode === 'stroke') ctx.strokeText(ch, cx, y);
-    else ctx.fillText(ch, cx, y);
-    cx += ctx.measureText(ch).width + tracking;
+function setTracking(ctx, px) {
+  // Chrome supports letterSpacing on the 2D context; elsewhere it is ignored.
+  try {
+    ctx.letterSpacing = `${px.toFixed(2)}px`;
+  } catch {
+    /* older engines: no tracking, the fit loop still keeps it inside */
   }
 }
 
-/** The largest size at or below `start` that keeps `text` inside `maxW`, floored at `min`. */
-function fitSize(ctx, text, start, min, maxW, trackingRatio) {
-  let size = Math.max(min, start);
-  for (let guard = 0; guard < 90; guard++) {
-    ctx.font = `700 ${size}px ${TITLE_FONT}`;
-    if (trackedWidth(ctx, text, size * trackingRatio) <= maxW) return size;
-    if (size <= min) return min;
-    size = Math.max(min, size * 0.975);
+function measureTracked(ctx, text, px) {
+  setTracking(ctx, px);
+  const w = ctx.measureText(text).width;
+  return w;
+}
+
+/** Splits a caption into the leading word (warm ink) and the rest (cool ink). */
+function splitCaption(caption) {
+  const clean = String(caption ?? '').replace(/\s+/g, ' ').trim();
+  if (!clean) return ['', ''];
+  const parts = clean.split(' ');
+  if (parts.length === 1) return [parts[0], ''];
+  return [parts[0], parts.slice(1).join(' ')];
+}
+
+function fitTitle(ctx, head, tail, maxWidth, startSize, minSize) {
+  let size = startSize;
+  for (;;) {
+    const track = size * 0.055;
+    const space = tail ? size * 0.30 : 0;
+    ctx.font = `${size}px ${FONT_TITLE}`;
+    const w = measureTracked(ctx, head, track) + space
+      + (tail ? measureTracked(ctx, tail, track) : 0);
+    if (w <= maxWidth || size <= minSize) break;
+    size -= Math.max(1, size * 0.045);
   }
   return size;
 }
 
-/** Splits a caption into two lines near its middle so a long title can stay big; null when one word. */
-function splitCaption(text) {
-  const words = text.split(/\s+/).filter(Boolean);
-  if (words.length < 2) return null;
-  let best = null;
-  let bestScore = Infinity;
-  for (let i = 1; i < words.length; i++) {
-    const a = words.slice(0, i).join(' ');
-    const b = words.slice(i).join(' ');
-    const score = Math.abs(a.length - b.length) + Math.max(0, b.length - a.length) * 0.35;
-    if (score < bestScore) {
-      bestScore = score;
-      best = [a, b];
-    }
-  }
-  return best;
-}
-
-/** Small caps label with tracking, used for the subtitle, the meta line and the strip. */
-function labelWidth(ctx, text, tracking) {
-  return trackedWidth(ctx, text, tracking);
-}
-
-// ---------------------------------------------------------------- layout
-
-/**
- * Works out every rectangle the poster needs, in design units, from the canvas aspect alone.
- * The title band takes a fixed share of the height so it stays legible at 16:9 as well as 4:5, and the panel
- * grid gets whatever is left between the top strip and the band.
- */
-export function planLayout(ctx, opts, width, height) {
-  const HD = (height / width) * DESIGN_WIDTH;
-  const aspect = width / height;
-  const landscape = aspect > 1.25;
-  const pad = clamp(Math.round(DESIGN_WIDTH * 0.028), 22, 34);
-  const topStrip = landscape ? 38 : 46;
-  const bandH = Math.round(clamp(HD * (landscape ? 0.4 : HD > 1150 ? 0.3 : 0.315), 150, 470));
-  const bandY = HD - bandH;
-  const gridGap = 18;
-  const grid = {
-    x: pad,
-    y: topStrip + 10,
-    w: DESIGN_WIDTH - pad * 2,
-    h: Math.max(80, bandY - gridGap - (topStrip + 10)),
-  };
-  const count = clamp(Math.round(opts.count ?? 4), 2, MAX_PANELS);
-  const fractions = panelCells(count, aspect);
-  const gutter = landscape ? 7 : 8;
-  const cells = fractions.map(([fx, fy, fw, fh]) => ({
-    x: grid.x + fx * grid.w + (fx > 0 ? gutter / 2 : 0),
-    y: grid.y + fy * grid.h + (fy > 0 ? gutter / 2 : 0),
-    w: fw * grid.w - (fx > 0 ? gutter / 2 : 0) - (fx + fw < 1 ? gutter / 2 : 0),
-    h: fh * grid.h - (fy > 0 ? gutter / 2 : 0) - (fy + fh < 1 ? gutter / 2 : 0),
-  }));
-  // Sort the cells into reading order — down the rows, left to right — so a panel's index is also its
-  // place on the sheet. The fractions above are written in composition order (hero first), which is what
-  // gives the layout its focal point but is not what a reader's eye follows; numbering the frames by
-  // composition order leaves the little corner numbers jumping around. Reordering here keeps the drawing
-  // order, the photo assignment and the labels in one sequence.
-  const order = cells.map((_, i) => i).sort((a, b) => {
-    const A = cells[a];
-    const B = cells[b];
-    const band = Math.min(A.h, B.h) * 0.45;
-    if (Math.abs(A.y - B.y) > band) return A.y - B.y;
-    return A.x - B.x;
-  });
-  const sorted = order.map((i) => cells[i]);
-  sorted.forEach((cell, i) => { cell.index = i; });
-  return { W: DESIGN_WIDTH, HD, aspect, landscape, pad, topStrip, bandY, bandH, grid, cells: sorted, gutter, count };
-}
-
-// ---------------------------------------------------------------- backdrop
-
-/** Where the sun sits, in design units: high and right of centre, its disc big enough to spill past the grid. */
-function sunGeometry(plan) {
-  const { W, HD } = plan;
-  const x = W * (plan.landscape ? 0.7 : 0.68);
-  const y = HD * (plan.landscape ? 0.2 : 0.25);
-  return {
-    x,
-    y,
-    r: W * (plan.landscape ? 0.115 : 0.15),
-    horizon: HD * (plan.landscape ? 0.34 : 0.42),
-  };
-}
-
-/**
- * The radiating ray burst behind everything: wedges of light leaving the sun, alternating strong and weak so the
- * disc reads as a printed sun rather than a blurred blob. One radial gradient per parity group keeps it to two
- * gradients however many rays there are. Drawn twice — once in the backdrop at full strength (it shows in the
- * gutters and around the grid) and once as a faint screen pass over the panels, which is what carries the burst
- * across the whole sheet.
- */
-function drawRays(ctx, sun, preset, alpha, count) {
+function strokeWord(ctx, text, x, y, size, track, p, outlineW) {
+  ctx.font = `${size}px ${FONT_TITLE}`;
+  setTracking(ctx, track);
+  // Chromatic fringe: a red copy left and a cyan copy right, screened in.
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = alpha;
-  ctx.translate(sun.x, sun.y);
-  const reach = Math.max(sun.x, sun.y) * 2.6;
-  for (const parity of [0, 1]) {
-    const grad = ctx.createRadialGradient(0, 0, sun.r * 0.55, 0, 0, reach);
-    grad.addColorStop(0, preset.rayColor);
-    grad.addColorStop(0.22, preset.rayColor);
-    grad.addColorStop(0.62, 'rgba(255, 255, 255, 0.06)');
-    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    const step = (Math.PI * 2) / count;
-    for (let i = parity; i < count; i += 2) {
-      const a0 = i * step - Math.PI / 2;
-      const a1 = a0 + step * (parity === 0 ? 0.42 : 0.26);
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, reach, a0, a1);
-      ctx.closePath();
-    }
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-/**
- * The sun disc: a hot core, a hard limb, faint concentric rings and a long corona, sliced through the lower half
- * by the old poster's horizontal cut bands. The bands are real holes — the disc is filled under an even-odd clip
- * of the circle minus the stripes — so whatever is behind the sun (backdrop in the first pass, the photo collage
- * in the second) shows back through them without any destructive compositing.
- *
- * `solid` decides the blend: the backdrop pass screens the disc into the sky, where there is nothing to hide; the
- * overprint pass paints it with real opacity, because a screen over an already-bright photograph washes out to
- * nothing. The overprint is also gated behind a slightly smaller disc so the collage's own edges stay visible.
- */
-function drawSunDisc(ctx, sun, preset, { alpha = 0.82, corona = 2.6, bands = true, rings = true, solid = false, body = true } = {}) {
-  const R = sun.r * corona;
-  const rim = sun.r * (solid ? 0.92 : 0.985);
-  const stripes = [];
-  if (bands) {
-    for (let i = 0; i < 9; i++) {
-      const y = sun.y + sun.r * (0.02 + i * 0.115);
-      stripes.push([y, sun.r * (0.024 + i * 0.017)]);
-    }
-  }
-  const clipDiscAndBands = (radius) => {
-    ctx.beginPath();
-    ctx.arc(sun.x, sun.y, radius, 0, Math.PI * 2);
-    for (const [y, h] of stripes) ctx.rect(sun.x - sun.r * 1.05, y, sun.r * 2.1, h);
-    ctx.clip('evenodd');
-  };
-
-  ctx.save();
-  ctx.globalCompositeOperation = solid ? 'source-over' : 'screen';
-
-  // The disc body, under the clip that punches the bands out. Solid: a saturated fill that keeps the photo
-  // texture in its top stops and lands on the preset's own sun colour at the limb.
-  ctx.save();
-  if (body) {
-    clipDiscAndBands(rim);
-    if (solid) {
-      const fill = ctx.createRadialGradient(sun.x, sun.y - sun.r * 0.35, sun.r * 0.05, sun.x, sun.y, rim);
-      fill.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
-      fill.addColorStop(0.42, preset.rayColor);
-      fill.addColorStop(0.86, preset.accentC);
-      fill.addColorStop(1, preset.accentA);
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = fill;
-    } else {
-      const fill = ctx.createRadialGradient(sun.x, sun.y, 0, sun.x, sun.y, R);
-      fill.addColorStop(0, '#ffffff');
-      fill.addColorStop(Math.max(0.001, (rim / R) * 0.72), '#ffffff');
-      fill.addColorStop(rim / R, preset.sun);
-      fill.addColorStop(Math.min(0.995, rim / R + 0.008), 'rgba(255, 255, 255, 0.4)');
-      fill.addColorStop(Math.min(0.999, rim / R + 0.2), 'rgba(255, 255, 255, 0.07)');
-      fill.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = fill;
-    }
-    ctx.beginPath();
-    ctx.arc(sun.x, sun.y, R, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-
-  // The hard limb: one drawn circle, so the disc always has a crisp edge whatever is behind it.
-  ctx.save();
-  ctx.globalCompositeOperation = solid ? 'source-over' : 'screen';
-  ctx.globalAlpha = solid ? Math.min(1, alpha + 0.25) : alpha * 0.6;
-  ctx.strokeStyle = solid ? preset.sun : 'rgba(255, 255, 255, 0.5)';
-  ctx.lineWidth = Math.max(2, sun.r * (solid ? 0.035 : 0.016));
-  ctx.beginPath();
-  ctx.arc(sun.x, sun.y, rim, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // A dark keyline just outside the limb separates the disc from a busy photograph.
-  if (solid) {
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 0.34;
-    ctx.strokeStyle = preset.titleOutline;
-    ctx.lineWidth = Math.max(2, sun.r * 0.055);
-    ctx.beginPath();
-    ctx.arc(sun.x, sun.y, rim + sun.r * 0.03, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  if (rings) {
-    ctx.save();
-    clipDiscAndBands(rim * (solid ? 1.02 : 1));
-    ctx.globalCompositeOperation = solid ? 'source-over' : 'screen';
-    ctx.strokeStyle = solid ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.32)';
-    ctx.lineWidth = Math.max(1, sun.r * 0.015);
-    ctx.globalAlpha = solid ? alpha * 0.8 : alpha * 0.7;
-    for (const k of [0.42, 0.62, 0.8]) {
-      ctx.beginPath();
-      ctx.arc(sun.x, sun.y, rim * k, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-  ctx.restore();
-}
-
-/**
- * The disc's cut bands as *printed* stripes: dark rules laid across the disc's lower half, clipped to its circle.
- * The backdrop pass punches real holes (the sky shows through); this pass paints them, which is what reads on top
- * of a busy photograph. Both are the same rhythm so the two passes agree where they overlap in the gutters.
- */
-function drawSunBands(ctx, sun, preset, alpha = 0.5) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(sun.x, sun.y, sun.r * 0.92, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = preset.titleOutline;
-  for (let i = 0; i < 9; i++) {
-    const y = sun.y + sun.r * (0.02 + i * 0.115);
-    ctx.fillRect(sun.x - sun.r, y, sun.r * 2, sun.r * (0.024 + i * 0.017));
-  }
-  ctx.restore();
-}
-
-/** The sunset backdrop that shows through the gutters and around the panels. */
-function drawBackdrop(ctx, plan, preset) {
-  const { W, HD } = plan;
-  const sun = sunGeometry(plan);
-
-  const sky = ctx.createLinearGradient(0, 0, W * 0.25, HD);
-  sky.addColorStop(0, preset.backdrop[0]);
-  sky.addColorStop(0.52, preset.backdrop[1]);
-  sky.addColorStop(1, preset.backdrop[2]);
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, W, HD);
-
-  // The ray burst first, so the disc burns over the roots of the rays.
-  drawRays(ctx, sun, preset, 0.5, 44);
-
-  // The horizon glow band: a broad warm slab of light along the waterline, brightest on the sun's own meridian.
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  const bandTop = sun.horizon - HD * 0.19;
-  const bandBottom = sun.horizon + HD * 0.3;
-  const hz = ctx.createLinearGradient(0, bandTop, 0, bandBottom);
-  hz.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  hz.addColorStop(0.36, 'rgba(255, 255, 255, 0.06)');
-  hz.addColorStop(0.46, preset.accentC);
-  hz.addColorStop(0.5, 'rgba(255, 255, 255, 0.72)');
-  hz.addColorStop(0.56, preset.accentA);
-  hz.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalAlpha = 0.34;
-  ctx.fillStyle = hz;
-  ctx.fillRect(0, bandTop, W, bandBottom - bandTop);
-
-  // The open water under the band: a couple of long shimmer rules, thinning as they fall away.
-  const sea = ctx.createLinearGradient(0, sun.horizon, 0, HD);
-  sea.addColorStop(0, 'rgba(255, 255, 255, 0.14)');
-  sea.addColorStop(0.5, 'rgba(255, 255, 255, 0.03)');
-  sea.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.globalAlpha = 0.5;
-  ctx.fillStyle = sea;
-  ctx.fillRect(0, sun.horizon, W, HD - sun.horizon);
-  ctx.globalAlpha = 0.22;
-  ctx.fillStyle = '#ffffff';
-  for (let i = 0; i < 9; i++) {
-    const y = sun.horizon + HD * (0.012 + i * 0.026);
-    const w = W * (0.5 - i * 0.04);
-    ctx.fillRect(sun.x - w / 2, y, w, Math.max(1, HD * 0.0022));
-  }
+  ctx.lineWidth = outlineW * 1.15;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(255,40,90,0.55)';
+  ctx.strokeText(text, x - size * 0.02, y);
+  ctx.strokeStyle = 'rgba(40,230,255,0.5)';
+  ctx.strokeText(text, x + size * 0.02, y);
   ctx.restore();
 
-  drawSunDisc(ctx, sun, preset, { alpha: 0.9, corona: 2.6, bands: true });
+  // Thick ink outline, then a thinner rim in the accent.
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = outlineW;
+  ctx.strokeStyle = p.stroke;
+  ctx.strokeText(text, x, y);
+  ctx.lineWidth = Math.max(1, outlineW * 0.26);
+  ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+  ctx.strokeText(text, x, y);
 
-  // Two soft light sources behind the collage, so the gutters glow instead of reading flat black.
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  const glow = ctx.createRadialGradient(W * 0.78, HD * 0.16, 0, W * 0.78, HD * 0.16, W * 0.5);
-  glow.addColorStop(0, preset.accentC);
-  glow.addColorStop(0.35, preset.accentA);
-  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalAlpha = 0.26;
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, HD);
-  const cool = ctx.createRadialGradient(W * 0.14, HD * 0.62, 0, W * 0.14, HD * 0.62, W * 0.55);
-  cool.addColorStop(0, preset.accentB);
-  cool.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalAlpha = 0.22;
-  ctx.fillStyle = cool;
-  ctx.fillRect(0, 0, W, HD);
-  ctx.restore();
-
-  // Fine diagonal ribs: a printed-poster texture rather than a flat fill.
-  ctx.save();
-  ctx.globalAlpha = 0.06;
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let x = -HD; x < W + HD; x += 26) {
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x + HD, HD);
-  }
-  ctx.stroke();
-  ctx.restore();
+  // The drop shadow is set by the caller's fill pass.
+  ctx.lineJoin = 'round';
 }
 
-// ---------------------------------------------------------------- panels
-
-/** Draws one photo into a cell, cover-fitted, then zoomed and offset by the panel's crop. */
-function drawPhoto(ctx, img, cell, crop) {
-  const iw = img.naturalWidth || img.width;
-  const ih = img.naturalHeight || img.height;
-  const zoom = clamp(crop.zoom ?? 1, 0.95, 2.4);
-  const scale = Math.max(cell.w / iw, cell.h / ih) * zoom;
-  const dw = iw * scale;
-  const dh = ih * scale;
-  const slackX = Math.max(0, dw - cell.w) / 2;
-  const slackY = Math.max(0, dh - cell.h) / 2;
-  const dx = cell.x + (cell.w - dw) / 2 + clamp(crop.ox ?? 0, -1, 1) * slackX;
-  const dy = cell.y + (cell.h - dh) / 2 + clamp(crop.oy ?? 0, -1, 1) * slackY;
-  ctx.drawImage(img, dx, dy, dw, dh);
-}
-
-/** An empty panel: a dark gradient plate with a hatch and a small prompt, so the poster still composes. */
-function drawEmptyPanel(ctx, cell) {
-  const g = ctx.createLinearGradient(cell.x, cell.y, cell.x + cell.w, cell.y + cell.h);
-  g.addColorStop(0, '#1c1030');
-  g.addColorStop(1, '#0b0614');
+function fillWord(ctx, text, x, y, size, track, inkA, inkB) {
+  ctx.font = `${size}px ${FONT_TITLE}`;
+  setTracking(ctx, track);
+  const g = ctx.createLinearGradient(0, y - size * 0.80, 0, y + size * 0.06);
+  g.addColorStop(0, inkA[0]);
+  g.addColorStop(0.62, inkA[1] ?? inkA[0]);
+  g.addColorStop(1, inkB?.[1] ?? inkB?.[0] ?? inkA[1] ?? inkA[0]);
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = size * 0.10;
+  ctx.shadowOffsetY = size * 0.03;
   ctx.fillStyle = g;
-  ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(cell.x, cell.y, cell.w, cell.h);
-  ctx.clip();
-  ctx.globalAlpha = 0.1;
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let x = cell.x - cell.h; x < cell.x + cell.w + cell.h; x += 24) {
-    ctx.moveTo(x, cell.y + cell.h);
-    ctx.lineTo(x + cell.h, cell.y);
-  }
-  ctx.stroke();
+  ctx.fillText(text, x, y);
   ctx.restore();
-  ctx.save();
-  ctx.fillStyle = 'rgba(255,255,255,0.45)';
-  ctx.font = `600 ${Math.max(12, cell.h * 0.055)}px ${LABEL_FONT}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('ADD A PHOTO', cell.x + cell.w / 2, cell.y + cell.h / 2);
-  ctx.restore();
+  return ctx.measureText(text).width;
 }
 
-/** The per-panel grade: a two-tone wash, a top/bottom falloff and an inner vignette, clipped to the cell. */
-function gradePanel(ctx, cell, preset, seed) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(cell.x, cell.y, cell.w, cell.h);
-  ctx.clip();
+function drawTitleBand(ctx, W, H, opts, p) {
+  const { caption, subtitle, fontScale, bandTop, frameId } = opts;
+  const bt = bandTop * H;
+  const bh = H - bt;
 
-  // Cool the shadows toward the preset's deep tone and warm the highlights, so every photo sits in one film.
-  // Panels differ only by the direction of that wash, never by its strength: six stills off one roll, not
-  // six copies of one still, and no single frame jumping out of the sheet.
-  const warmFirst = seed % 2 === 0;
-  const wash = ctx.createLinearGradient(cell.x, cell.y, cell.x + cell.w * 0.35, cell.y + cell.h);
-  wash.addColorStop(0, warmFirst ? preset.washTop : preset.washBottom);
-  wash.addColorStop(0.55, preset.washDeep);
-  wash.addColorStop(1, warmFirst ? preset.washBottom : preset.washTop);
-  ctx.globalCompositeOperation = 'overlay';
-  ctx.globalAlpha = 0.38;
-  ctx.fillStyle = wash;
-  ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
+  // Band backdrop: near-black with a faint vertical fall and a top hairline.
+  const band = ctx.createLinearGradient(0, bt, 0, H);
+  band.addColorStop(0, p.band[0]);
+  band.addColorStop(1, p.band[1]);
+  ctx.fillStyle = band;
+  ctx.fillRect(0, bt, W, bh);
 
-  // A touch of desaturation keeps six different photos reading as one printed sheet.
-  ctx.globalCompositeOperation = 'saturation';
-  ctx.globalAlpha = 0.2;
-  ctx.fillStyle = '#7c7c8a';
-  ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
-
-  // Screen back a little light in the top corner: the sun is always just off frame.
-  ctx.globalCompositeOperation = 'screen';
-  const lift = ctx.createRadialGradient(
-    cell.x + cell.w * (0.8 - (seed % 3) * 0.16),
-    cell.y + cell.h * 0.1,
-    0,
-    cell.x + cell.w * 0.72,
-    cell.y + cell.h * 0.08,
-    cell.w * 0.8,
-  );
-  lift.addColorStop(0, preset.accentC);
-  lift.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
-  ctx.globalAlpha = 0.13;
-  ctx.fillStyle = lift;
-  ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
-
-  // Print falloff: darker at the foot of every panel, like the old screen-printed covers.
-  ctx.globalCompositeOperation = 'source-over';
-  const foot = ctx.createLinearGradient(0, cell.y, 0, cell.y + cell.h);
-  foot.addColorStop(0, 'rgba(10, 2, 20, 0.2)');
-  foot.addColorStop(0.32, 'rgba(10, 2, 20, 0)');
-  foot.addColorStop(0.72, 'rgba(10, 2, 20, 0.04)');
-  foot.addColorStop(1, 'rgba(6, 1, 14, 0.44)');
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = foot;
-  ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
-
-  const inner = ctx.createRadialGradient(
-    cell.x + cell.w / 2,
-    cell.y + cell.h * 0.46,
-    Math.min(cell.w, cell.h) * 0.3,
-    cell.x + cell.w / 2,
-    cell.y + cell.h * 0.5,
-    Math.max(cell.w, cell.h) * 0.8,
-  );
-  inner.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  inner.addColorStop(1, 'rgba(0, 0, 0, 0.34)');
-  ctx.fillStyle = inner;
-  ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
-  ctx.restore();
-}
-
-/** The black keyline, the thin light bevel and the inset rule that make each panel read as a pasted print. */
-function strokePanel(ctx, cell, preset, hero) {
-  ctx.save();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = 'rgba(4, 1, 10, 0.9)';
-  ctx.strokeRect(cell.x - 1.5, cell.y - 1.5, cell.w + 3, cell.h + 3);
-  ctx.lineWidth = 1.2;
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-  ctx.strokeRect(cell.x + 0.6, cell.y + 0.6, cell.w - 1.2, cell.h - 1.2);
-
-  // A bright inner rule, inset a little further: on the hero it goes white-hot, on the companions it stays a
-  // hairline of the preset's own light, so the hero is the print the eye lands on first.
-  const inset = hero ? 7 : 5;
-  ctx.lineWidth = hero ? 1.6 : 1;
-  ctx.strokeStyle = hero ? 'rgba(255, 255, 255, 0.72)' : 'rgba(255, 255, 255, 0.3)';
-  ctx.strokeRect(cell.x + inset, cell.y + inset, cell.w - inset * 2, cell.h - inset * 2);
-
-  if (hero) {
-    // Corner brackets on the hero: four L-marks inside the frame, the contact-sheet crop mark.
-    const tick = Math.min(cell.w, cell.h) * 0.1;
-    const off = inset + 3;
-    const edges = [
-      [cell.x + off, cell.y + off, 1, 1],
-      [cell.x + cell.w - off, cell.y + off, -1, 1],
-      [cell.x + off, cell.y + cell.h - off, 1, -1],
-      [cell.x + cell.w - off, cell.y + cell.h - off, -1, -1],
-    ];
-    ctx.lineWidth = 2.4;
-    ctx.lineCap = 'square';
-    ctx.strokeStyle = preset.accentC;
-    ctx.globalAlpha = 0.95;
-    for (const [cx, cy, sx, sy] of edges) {
-      ctx.beginPath();
-      ctx.moveTo(cx + sx * tick, cy);
-      ctx.lineTo(cx, cy);
-      ctx.lineTo(cx, cy + sy * tick);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 0.55;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 0.9;
-    for (const [cx, cy, sx, sy] of edges) {
-      ctx.beginPath();
-      ctx.moveTo(cx + sx * tick, cy);
-      ctx.lineTo(cx, cy);
-      ctx.lineTo(cx, cy + sy * tick);
-      ctx.stroke();
-    }
-  }
-  ctx.restore();
-}
-
-/** The tiny frame number in a panel's corner, plus its bracket — a contact-sheet detail. */
-function markPanel(ctx, cell, index, preset) {
-  const size = clamp(cell.h * 0.05, 11, 26);
-  const x = cell.x + size * 0.9;
-  const y = cell.y + cell.h - size * 0.8;
-  ctx.save();
-  ctx.font = `700 ${size}px ${MONO_FONT}`;
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.62)';
-  ctx.fillText(String(index + 1).padStart(2, '0'), x, y);
-  const w = ctx.measureText(String(index + 1).padStart(2, '0')).width;
-  ctx.strokeStyle = preset.accentA;
-  ctx.globalAlpha = 0.85;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x + w + 7, y - size * 0.32);
-  ctx.lineTo(x + w + 7 + size * 0.9, y - size * 0.32);
-  ctx.stroke();
-  ctx.restore();
-}
-
-// ---------------------------------------------------------------- grade
-
-/** The full-canvas grade: sunset gradient, sun flare, streak and a cool bloom along the top edge. */
-function drawGrade(ctx, plan, preset) {
-  const { W, HD } = plan;
-  const sun = sunGeometry(plan);
-  ctx.save();
-
-  // Sunset wash across the whole sheet, 'overlay' then 'screen' — the Vice City signature.
-  const sunset = ctx.createLinearGradient(0, 0, W * 0.12, HD);
-  sunset.addColorStop(0, preset.sky[0]);
-  sunset.addColorStop(0.48, preset.sky[1]);
-  sunset.addColorStop(1, preset.sky[2]);
-  ctx.globalCompositeOperation = 'overlay';
-  ctx.globalAlpha = 0.46;
-  ctx.fillStyle = sunset;
-  ctx.fillRect(0, 0, W, HD);
-
-  ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = 0.1;
-  ctx.fillStyle = sunset;
-  ctx.fillRect(0, 0, W, HD);
-
-  // The ray burst again, faint, over the panels: this is what makes the collage sit inside one light instead of
-  // in front of it. Same geometry as the backdrop, so the rays line up through the gutters.
-  drawRays(ctx, sun, preset, 0.16, 44);
-
-  // The disc again, over the collage: a flat printed orange disc with the cut bands drawn as dark stripes across
-  // it, which is the old poster's treatment — a graphic sun, not a photographic flare.
-  drawSunDisc(ctx, sun, preset, { alpha: 0.66, corona: 1.42, bands: false, rings: true, solid: true });
-  drawSunBands(ctx, sun, preset, 0.5);
-
-  // The sun's own bloom, centred on the disc. Kept modest: the disc is a printed shape, and a big radial glow
-  // over the collage just lifts every photo's blacks and flattens the whole sheet.
-  const glowR = W * 0.42;
-  const sunGlow = ctx.createRadialGradient(sun.x, sun.y, 0, sun.x, sun.y, glowR);
-  sunGlow.addColorStop(0, preset.sun);
-  sunGlow.addColorStop(0.08, 'rgba(255, 232, 200, 0.55)');
-  sunGlow.addColorStop(0.3, 'rgba(255, 168, 120, 0.14)');
-  sunGlow.addColorStop(1, 'rgba(255, 120, 80, 0)');
-  ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = 0.3;
-  ctx.fillStyle = sunGlow;
-  ctx.fillRect(0, 0, W, HD);
-
-  // The anamorphic streak through the sun: a wide horizontal bar, scaled to nothing vertically.
-  ctx.save();
-  ctx.translate(sun.x, sun.y);
-  ctx.scale(1, 0.062);
-  const streak = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.72);
-  streak.addColorStop(0, 'rgba(255, 250, 235, 0.9)');
-  streak.addColorStop(0.35, 'rgba(255, 200, 170, 0.26)');
-  streak.addColorStop(1, 'rgba(255, 120, 160, 0)');
-  ctx.globalAlpha = 0.5;
-  ctx.fillStyle = streak;
-  ctx.fillRect(-W * 0.72, -W * 0.72, W * 1.44, W * 1.44);
-  ctx.restore();
-
-  // The diagonal sun flare: a long soft shaft from the sun's upper right, cut across the whole sheet. Built as a
-  // band gradient perpendicular to its own direction so the light falls off on both sides of the axis.
-  ctx.save();
-  const angle = -Math.PI * 0.29;
-  const axisX = Math.cos(angle);
-  const axisY = Math.sin(angle);
-  ctx.translate(sun.x, sun.y);
-  ctx.rotate(angle);
-  const len = Math.max(W, HD) * 1.9;
-  const flare = ctx.createLinearGradient(0, -W * 0.34, 0, W * 0.34);
-  flare.addColorStop(0, 'rgba(255, 255, 255, 0)');
-  flare.addColorStop(0.38, 'rgba(255, 226, 210, 0.1)');
-  flare.addColorStop(0.5, 'rgba(255, 255, 255, 0.62)');
-  flare.addColorStop(0.62, 'rgba(255, 210, 200, 0.1)');
-  flare.addColorStop(1, 'rgba(255, 255, 255, 0)');
-  ctx.globalAlpha = 0.3;
-  ctx.fillStyle = flare;
-  ctx.beginPath();
-  ctx.moveTo(-len, 0);
-  ctx.lineTo(0, -W * 0.34);
-  ctx.lineTo(len, 0);
-  ctx.lineTo(0, W * 0.34);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-
-  // Two flare ghosts on the axis through the sun, on the far side of the frame: the classic lens reflection.
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
-  for (const [k, r, a] of [[0.55, 0.05, 0.14], [1.15, 0.032, 0.1], [1.7, 0.075, 0.08]]) {
-    const gx = sun.x - axisX * W * k;
-    const gy = sun.y - axisY * W * k;
-    const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, W * r);
-    g.addColorStop(0, preset.accentB);
-    g.addColorStop(0.62, preset.accentB);
-    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.globalAlpha = a;
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(gx, gy, W * r, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  const topGlow = ctx.createLinearGradient(0, bt, 0, bt + bh * 0.35);
+  topGlow.addColorStop(0, p.glow);
+  topGlow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = topGlow;
+  ctx.fillRect(0, bt, W, bh * 0.4);
   ctx.restore();
 
-  // Cool bloom rising from the bottom-left, balancing the warm sun.
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.fillRect(0, bt, W, Math.max(1, H * 0.0016));
+  ctx.fillStyle = p.accent;
+  ctx.fillRect(W * 0.06, bt - H * 0.004, W * 0.14, Math.max(2, H * 0.0035));
+
+  // Subtitle row: diamond, hairline, small tracked caps.
+  const padX = W * 0.065;
+  const subY = bt + bh * 0.20;
+  const diamond = Math.max(3, W * 0.006);
   ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  const bloom = ctx.createRadialGradient(W * 0.08, HD, 0, W * 0.08, HD, W * 0.6);
-  bloom.addColorStop(0, preset.accentB);
-  bloom.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalAlpha = 0.16;
-  ctx.fillStyle = bloom;
-  ctx.fillRect(0, 0, W, HD);
+  ctx.translate(padX + diamond, subY);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillStyle = p.accent;
+  ctx.fillRect(-diamond, -diamond, diamond * 2, diamond * 2);
   ctx.restore();
 
-  ctx.restore();
-}
-
-// ---------------------------------------------------------------- lettering
-
-/**
- * Fits the caption into the band. The block is measured from the top of the band down, so the subtitle, the
- * caption and the technical line can never collide whatever size the caption ends up at: the caption simply
- * takes whatever room is left between them.
- */
-function planType(ctx, plan, opts, preset) {
-  const { W, bandH, bandY } = plan;
-  const pad = plan.pad + 2;
-  const markW = Math.min(bandH * 0.5, W * 0.155);
-  const markGap = W * 0.028;
-  const maxW = W - pad * 2 - markW - markGap;
-  const raw = (opts.caption ?? '').trim().toUpperCase() || 'UNTITLED';
-  const fontScale = clamp((opts.fontScale ?? 100) / 100, 0.4, 2);
-  const subtitleRaw = (opts.subtitle ?? '').trim().toUpperCase();
-
-  const metaSize = clamp(bandH * 0.046, 9, 24);
-  const subtitleSize = clamp(bandH * 0.068, 10, 34);
-  const padTop = bandH * 0.115;
-  const capRatio = 0.72; // caps of the narrow grotesque sit at ~0.72 em above the baseline
-  const gapSub = subtitleSize * 0.62;
-  const metaBaseline = bandH - metaSize * 1.2 - bandH * 0.085;
-  const titleTop = padTop + (subtitleRaw ? subtitleSize + gapSub : 0);
-  const titleRoom = Math.max(bandH * 0.2, metaBaseline - metaSize * 1.6 - titleTop);
-
-  // Negative tracking is the GTA register, but the heavy ink outline eats the gap: at -0.012 the glyph edges
-  // in a long word touch, so the mark reads as one blob. A hair of positive tracking holds the letters apart.
-  const trackingRatio = 0.004;
-  const min = Math.max(bandH * 0.12, 16);
-  const base = Math.min(bandH * 0.5 * fontScale, titleRoom * 0.94);
-
-  let lines = [raw];
-  let size = fitSize(ctx, raw, base, min, maxW, trackingRatio);
-  ctx.font = `700 ${size}px ${TITLE_FONT}`;
-  if (trackedWidth(ctx, raw, size * trackingRatio) > maxW * 1.001) {
-    const split = splitCaption(raw);
-    if (split !== null) {
-      lines = split;
-      size = Math.min(
-        fitSize(ctx, split[0], base, min, maxW, trackingRatio),
-        fitSize(ctx, split[1], base, min, maxW, trackingRatio),
-      );
-    }
+  const subSize = clamp(Math.min(W, H) * 0.0225, 9, 26);
+  const subText = String(subtitle ?? '').toUpperCase();
+  if (subText) {
+    ctx.font = `${subSize}px ${FONT_MONO}`;
+    setTracking(ctx, subSize * 0.22);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.fillText(subText, padX + diamond * 3.2, subY + subSize * 0.06);
+    const tw = measureTracked(ctx, subText, subSize * 0.22);
+    const ruleStart = padX + diamond * 3.2 + tw + subSize * 1.2;
+    const ruleEnd = W * 0.74;
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.fillRect(ruleStart, subY, Math.max(10, ruleEnd - ruleStart), Math.max(1, H * 0.0012));
   }
 
-  // Two lines have to share the vertical room; shrink until they fit inside titleRoom.
-  const lineGap = 0.95;
-  const blockH = size * (capRatio + lineGap * (lines.length - 1));
-  if (blockH > titleRoom) size = Math.max(min * 0.7, (size * titleRoom) / blockH);
-  ctx.font = `700 ${size}px ${TITLE_FONT}`;
-  const widest = Math.max(...lines.map((line) => trackedWidth(ctx, line, size * trackingRatio)));
-
-  // Centre the block in the room it was given. The caption is usually width-bound, not height-bound, so without
-  // this the mark sits at the top of the band and leaves a hole underneath it.
-  const finalBlock = size * (capRatio + lineGap * (lines.length - 1));
-  const blockTop = titleTop + Math.max(0, (titleRoom - finalBlock) / 2);
-
-  return {
-    pad,
-    markW,
-    markGap,
-    maxW,
-    raw,
-    lines,
-    size,
-    capRatio,
-    tracking: size * trackingRatio,
-    widest,
-    subtitle: subtitleRaw,
-    subtitleSize,
-    metaSize,
-    padTop,
-    titleTop,
-    titleRoom,
-    blockH: finalBlock,
-    lineGap,
-    // Baselines are absolute canvas units: the band's own top plus the offset planned inside it.
-    firstBaseline: bandY + blockTop + size * capRatio,
-    markX: W - pad - markW,
-    metaBaseline: bandY + metaBaseline,
-  };
-}
-
-/**
- * Splits a caption line into its first word and the rest, so the wordmark can be set in two fills — the GTA
- * register's two-tone logotype. Returns null when there is only one word to split.
- */
-function splitFirstWord(text) {
-  const m = /^(\S+)(\s+)(\S.*)$/.exec(text.trim());
-  if (!m) return null;
-  return { head: m[1], tail: m[3] };
-}
-
-/**
- * Draws the caption in the GTA register: a soft cast shadow, two heavy strokes, a gradient fill, a lit edge.
- * When the caption has two words or more it is set as a two-tone wordmark — the first word in one fill, the
- * rest in another, each with the heavy ink outline, so the logotype reads as a designed mark and not a line of
- * type. A chromatic-aberration fringe (magenta left, cyan right) is laid on the glyph edges under the ink.
- */
-function drawTitle(ctx, type, x, y, preset) {
-  const { lines, size, tracking } = type;
-  ctx.save();
-  ctx.font = `700 ${size}px ${TITLE_FONT}`;
-  ctx.textBaseline = 'alphabetic';
-  ctx.textAlign = 'left';
-  ctx.lineJoin = 'round';
-  ctx.miterLimit = 2;
-
-  const drawAll = (mode, dx, dy, style) => {
-    if (style) ctx.fillStyle = style;
-    lines.forEach((line, i) => {
-      drawTracked(ctx, line, x + dx, y + dy + i * size * type.lineGap, tracking, mode);
-    });
-  };
-
-  // Runs of the block, each with its own fill: when there is a single line the first word takes the warm half of
-  // the preset and the rest the cool half. Each run is [text, x, baseline offset, fill stops]. Both runs start
-  // white at the cap line for the chrome look, then diverge hard into accentC/accentA and accentB — two colours
-  // at a glance, not one colour with a tint.
-  const runs = [];
-  const fillA = ['#ffffff', preset.accentC, preset.accentA];
-  const fillB = ['#ffffff', preset.accentB, preset.accentB];
-  lines.forEach((line, i) => {
-    const offset = i * size * type.lineGap;
-    const split = lines.length === 1 ? splitFirstWord(line) : null;
-    if (split) {
-      const headW = trackedWidth(ctx, split.head, tracking);
-      const spaceW = ctx.measureText(' ').width;
-      runs.push({ text: split.head, x, offset, fill: fillA });
-      runs.push({ text: split.tail, x: x + headW + spaceW, offset, fill: fillB });
-    } else {
-      runs.push({ text: line, x, offset, fill: i === 0 ? fillA : fillB });
-    }
-  });
-
-  // 2. chromatic-aberration fringing. The coloured rims go on *wider* than the ink and offset sideways, so the
-  // ink stroke drawn over them leaves a sliver of saturated magenta on one side of every letterform and cyan on
-  // the other. Drawing them as fills under the ink would be invisible (the ink is 0.2em wide, the offsets are a
-  // few pixels), and screening over a white-topped fill is a no-op, so this is the only way the fringe actually
-  // reads at print size.
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = '#ff2fd0';
-  ctx.lineWidth = size * 0.265;
-  drawAll('stroke', -size * 0.032, size * 0.006);
-  ctx.strokeStyle = '#1fe6ff';
-  ctx.lineWidth = size * 0.265;
-  drawAll('stroke', size * 0.032, -size * 0.006);
-
-  // 3. the cast shadow, blurred off the glyph edges so the type sits on the plate.
-  ctx.save();
-  ctx.globalAlpha = 0.62;
-  ctx.fillStyle = '#05010c';
-  ctx.filter = `blur(${Math.max(2, size * 0.09)}px)`;
-  drawAll('fill', size * 0.04, size * 0.07);
-  ctx.restore();
-
-  // 4. the wide ink outline — thick, and twice over, so it closes the middle of the fringe but leaves its edges.
-  ctx.strokeStyle = preset.titleOutline;
-  ctx.lineWidth = size * 0.2;
-  drawAll('stroke', 0, 0);
-  ctx.lineWidth = size * 0.115;
-  drawAll('stroke', 0, 0);
-
-  // 5. a tight neon rim inside the ink, in the preset's own colour, bouncing light back off the flat edge.
-  ctx.strokeStyle = preset.titleEdge;
-  ctx.lineWidth = size * 0.062;
-  drawAll('stroke', 0, 0);
-
-  // 6. the fills, one gradient per run: white at the cap line down to the run's own warm or cool foot.
-  const blockTop = y - size * type.capRatio;
-  for (const run of runs) {
-    const runTop = y + run.offset - size * type.capRatio;
-    const runBottom = y + run.offset + size * 0.16;
-    const grad = ctx.createLinearGradient(0, runTop, 0, runBottom);
-    grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.2, run.fill[0]);
-    grad.addColorStop(0.62, run.fill[1]);
-    grad.addColorStop(1, run.fill[2] ?? run.fill[1]);
-    ctx.fillStyle = grad;
-    drawTracked(ctx, run.text, run.x, y + run.offset, tracking, 'fill');
-  }
-
-  // 7. a neon edge — a screen pass along the rim, then a highlight along the upper edge and a warm bounce below.
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = 0.5;
-  ctx.strokeStyle = preset.accentB;
-  ctx.lineWidth = Math.max(1.4, size * 0.02);
-  drawAll('stroke', -size * 0.008, -size * 0.014);
-  ctx.globalAlpha = 0.42;
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = Math.max(1, size * 0.012);
-  drawAll('stroke', -size * 0.005, -size * 0.016);
-  ctx.globalAlpha = 0.3;
-  ctx.strokeStyle = preset.accentC;
-  ctx.lineWidth = Math.max(1, size * 0.02);
-  drawAll('stroke', size * 0.005, size * 0.016);
-  ctx.restore();
-
-  // 7. specular break across the middle of the mark: a thin white slash, a printed highlight on the chrome.
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = 0.26;
-  ctx.fillStyle = '#ffffff';
-  const slashY = blockTop + size * type.capRatio * 0.62;
-  ctx.beginPath();
-  ctx.moveTo(x - size * 0.2, slashY + size * 0.1);
-  ctx.lineTo(x + type.widest + size * 0.3, slashY - size * 0.1);
-  ctx.lineTo(x + type.widest + size * 0.3, slashY - size * 0.03);
-  ctx.lineTo(x - size * 0.2, slashY + size * 0.17);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-
-  ctx.restore();
-}
-
-/** The 'VI' lockup at the right of the band: a numeral sharing the caption baseline, then a rule and the year. */
-function drawMark(ctx, type, plan, preset) {
-  const { bandH } = plan;
-  // The numeral is a colophon, not a second headline: kept clearly smaller than the caption so the eye
-  // lands on the title first and reads 'VI' as a stamp on the artwork.
-  const size = Math.min(type.size * 0.62, type.markW * 0.86);
-  const x = type.markX;
-  const baseline = type.firstBaseline;
-  const tracking = -size * 0.02;
-  ctx.save();
-  ctx.font = `700 ${size}px ${TITLE_FONT}`;
-  ctx.textBaseline = 'alphabetic';
-  ctx.textAlign = 'left';
-  ctx.lineJoin = 'round';
-  const w = trackedWidth(ctx, 'VI', tracking);
-  const mx = x + (type.markW - w) / 2;
-
-  ctx.strokeStyle = preset.titleOutline;
-  ctx.lineWidth = size * 0.175;
-  drawTracked(ctx, 'VI', mx, baseline, tracking, 'stroke');
-  ctx.strokeStyle = preset.titleEdge;
-  ctx.lineWidth = size * 0.072;
-  drawTracked(ctx, 'VI', mx, baseline, tracking, 'stroke');
-  const fill = ctx.createLinearGradient(0, baseline - size * 0.74, 0, baseline);
-  fill.addColorStop(0, preset.titleFill[0]);
-  fill.addColorStop(0.45, preset.titleFill[2]);
-  fill.addColorStop(1, preset.titleFill[3]);
-  ctx.fillStyle = fill;
-  drawTracked(ctx, 'VI', mx, baseline, tracking, 'fill');
-
-  // rule + year, aligned to the numeral's own width
-  const ruleY = baseline + size * 0.2;
-  ctx.globalAlpha = 0.85;
-  ctx.fillStyle = preset.accentA;
-  ctx.fillRect(x, ruleY, type.markW, Math.max(1.5, bandH * 0.005));
-  ctx.globalAlpha = 0.6;
-  ctx.font = `600 ${Math.max(9, type.metaSize * 0.92)}px ${MONO_FONT}`;
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('EST. 1986', x + type.markW / 2, ruleY + type.metaSize * 1.75);
-  ctx.restore();
-}
-
-/** The bottom band: ink plate, accent rule, subtitle, caption, meta line. */
-function drawBand(ctx, plan, type, preset, opts) {
-  const { W, HD, bandY, bandH } = plan;
-  const pad = type.pad;
-
-  // A scrim above the band so the panels slide into the type instead of being cut by it.
-  const scrim = ctx.createLinearGradient(0, bandY - bandH * 0.34, 0, bandY + bandH * 0.1);
-  scrim.addColorStop(0, 'rgba(8, 2, 16, 0)');
-  scrim.addColorStop(1, 'rgba(8, 2, 16, 0.62)');
-  ctx.fillStyle = scrim;
-  ctx.fillRect(0, bandY - bandH * 0.36, W, bandH * 0.48);
-
-  // The plate itself.
-  const plate = ctx.createLinearGradient(0, bandY, W * 0.35, HD);
-  plate.addColorStop(0, preset.ink[0]);
-  plate.addColorStop(0.62, preset.ink[1]);
-  plate.addColorStop(1, '#050109');
-  ctx.fillStyle = plate;
-  ctx.fillRect(0, bandY, W, HD - bandY);
-
-  // The accent rule along the top edge, brightest in the middle.
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  const rule = ctx.createLinearGradient(pad, 0, W - pad, 0);
-  rule.addColorStop(0, preset.accentA);
-  rule.addColorStop(0.45, preset.accentC);
-  rule.addColorStop(1, preset.accentB);
-  ctx.fillStyle = rule;
-  ctx.fillRect(pad, bandY - 3, W - pad * 2, 3);
-  ctx.globalAlpha = 0.3;
-  ctx.fillRect(pad, bandY - 10, W - pad * 2, 1);
-  ctx.restore();
-
-  // Subtitle row: a diamond, the words, then a hairline running toward the numeral.
-  if (type.subtitle !== '') {
-    const subBaseline = plan.bandY + type.padTop + type.subtitleSize * 0.74;
-    const track = type.subtitleSize * 0.3;
-    ctx.save();
-    ctx.font = `600 ${type.subtitleSize}px ${LABEL_FONT}`;
+  // Wordmark: full band width, so the title is as large as the poster allows.
+  // It is fitted to the band minus the foot line's room, and the tech line is
+  // drawn under it, so a two-word caption never collides with the footer.
+  const [head, tail] = splitCaption(caption);
+  const baseSize = Math.min(H * 0.205, (H - bt) * 0.56);
+  const maxW = W - padX * 2;
+  const size = head ? fitTitle(ctx, head, tail, maxW, baseSize * fontScale, H * 0.045) : 0;
+  const baseline = bt + bh * 0.74;
+  if (head) {
+    const track = size * 0.055;
+    const outlineW = size * 0.085;
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
-    let size = type.subtitleSize;
-    for (let guard = 0; guard < 40 && trackedWidth(ctx, type.subtitle, size * 0.3) > type.maxW * 0.72; guard++) {
-      size *= 0.96;
-      ctx.font = `600 ${size}px ${LABEL_FONT}`;
+    strokeWord(ctx, head, padX, baseline, size, track, p, outlineW);
+    const wHead = fillWord(ctx, head, padX, baseline, size, track, p.inkA, p.inkA);
+    if (tail) {
+      const gap = size * 0.30;
+      strokeWord(ctx, tail, padX + wHead + gap, baseline, size, track, p, outlineW);
+      fillWord(ctx, tail, padX + wHead + gap, baseline, size, track, p.inkB, p.inkB);
     }
-    const subW = trackedWidth(ctx, type.subtitle, size * 0.3);
-    const diamond = size * 0.38;
-    ctx.save();
-    ctx.translate(pad + diamond * 0.5, subBaseline - size * 0.3);
-    ctx.rotate(Math.PI / 4);
-    ctx.fillStyle = preset.accentA;
-    ctx.fillRect(-diamond / 2, -diamond / 2, diamond, diamond);
-    ctx.restore();
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    const textX = pad + diamond + size * 0.62;
-    drawTracked(ctx, type.subtitle, textX, subBaseline, size * 0.3, 'fill');
-    const lineFrom = textX + subW + size * 0.85;
-    const lineTo = type.markX - type.markGap * 0.4;
-    if (lineTo > lineFrom + 12) {
-      ctx.globalAlpha = 0.28;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(lineFrom, subBaseline - size * 0.3, lineTo - lineFrom, 1.2);
-    }
-    ctx.restore();
+  } else {
+    ctx.font = `${size || H * 0.1}px ${FONT_TITLE}`;
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.textAlign = 'left';
+    ctx.fillText('UNTITLED', padX, baseline);
   }
+  return { bt, bh, padX, baseline, size, subY };
+}
 
-  // Caption.
-  drawTitle(ctx, type, pad, type.firstBaseline, preset);
+/** The "VI" colophon, set at the right end of the subtitle row: the edition
+    mark, with the year under it, clear of the wordmark below. */
+function drawColophon(ctx, W, H, opts, p, band) {
+  const size = Math.min(W, H) * 0.062;
+  if (size < 12) return;
+  const padX = W * 0.065;
+  const rightX = W - padX;
+  const baseY = band.subY + size * 0.36;
 
-  // Technical line at the foot of the band.
-  const metaY = type.metaBaseline;
-  const count = String(plan.count).padStart(2, '0');
-  const meta = `${count} PANELS   ·   ${preset.name.toUpperCase()}   ·   ${opts.ratioLabel ?? '1:1'}`;
   ctx.save();
-  ctx.font = `600 ${type.metaSize}px ${MONO_FONT}`;
+  ctx.textAlign = 'right';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.46)';
-  drawTracked(ctx, meta, pad, metaY, type.metaSize * 0.2, 'fill');
-  ctx.textAlign = 'right';
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-  ctx.fillText('VICE COVER STUDIO', W - pad, metaY);
-  ctx.restore();
+  ctx.font = `${size}px ${FONT_TITLE}`;
+  setTracking(ctx, size * 0.10);
+  const numeralW = ctx.measureText('VI').width;
+  const x = rightX - numeralW;
 
-  // The numeral lockup.
-  drawMark(ctx, type, plan, preset);
-}
+  ctx.lineWidth = Math.max(2, size * 0.075);
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(12,4,14,0.75)';
+  ctx.strokeText('VI', x, baseY);
+  const g = ctx.createLinearGradient(0, baseY - size, 0, baseY);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(1, p.accent);
+  ctx.fillStyle = g;
+  ctx.fillText('VI', x, baseY);
 
-/** The billing strip above the panels. */
-function drawTopStrip(ctx, plan, preset) {
-  const { W, pad, topStrip } = plan;
-  ctx.save();
-  const scrim = ctx.createLinearGradient(0, 0, 0, topStrip);
-  scrim.addColorStop(0, 'rgba(6, 1, 14, 0.6)');
-  scrim.addColorStop(1, 'rgba(6, 1, 14, 0)');
-  ctx.fillStyle = scrim;
-  ctx.fillRect(0, 0, W, topStrip + 16);
-
-  const size = clamp(topStrip * 0.3, 9, 17);
-  ctx.font = `600 ${size}px ${LABEL_FONT}`;
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.66)';
-  drawTracked(ctx, 'A VICE COVER STUDIO PICTURE', pad, topStrip * 0.52, size * 0.24, 'fill');
-  ctx.textAlign = 'right';
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.44)';
-  ctx.fillText('SUNSET / 1986 / 35MM', W - pad, topStrip * 0.52);
-  ctx.globalAlpha = 0.4;
-  ctx.strokeStyle = preset.accentA;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(pad, topStrip - 1);
-  ctx.lineTo(W - pad, topStrip - 1);
-  ctx.stroke();
+  const small = size * 0.36;
+  ctx.font = `${small}px ${FONT_MONO}`;
+  setTracking(ctx, small * 0.20);
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText('2026', rightX, baseY + small * 1.75);
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillRect(x - size * 1.5, baseY - small * 0.1, size * 1.5, Math.max(1, H * 0.0012));
   ctx.restore();
 }
 
-// ---------------------------------------------------------------- finish
-
-/** Vignette, grain, scanlines and the outer frame: the film finish over everything, type included. */
-function drawFinish(ctx, plan, preset) {
-  const { W, HD } = plan;
-
-  const vignette = ctx.createRadialGradient(W * 0.5, HD * 0.44, Math.min(W, HD) * 0.2, W * 0.5, HD * 0.5, Math.max(W, HD) * 0.8);
-  vignette.addColorStop(0, 'rgba(6, 1, 14, 0)');
-  vignette.addColorStop(0.58, 'rgba(6, 1, 14, 0.16)');
-  vignette.addColorStop(1, 'rgba(3, 0, 8, 0.88)');
-  ctx.fillStyle = vignette;
-  ctx.fillRect(0, 0, W, HD);
-
+/** The foot line: panel count, grade name and frame, in monospace caps. */
+function drawTechLine(ctx, W, H, opts, p, band) {
+  const { count, preset, frameId } = opts;
+  const fs = clamp(Math.min(W, H) * 0.0175, 8, 20);
+  const text = `${String(count).padStart(2, '0')} PANELS  ·  ${preset.name.toUpperCase()}  ·  ${frameId}`;
   ctx.save();
-  ctx.globalCompositeOperation = 'overlay';
-  ctx.globalAlpha = 0.13;
-  ctx.fillStyle = noisePattern(ctx);
-  ctx.fillRect(0, 0, W, HD);
-  ctx.globalCompositeOperation = 'soft-light';
-  ctx.globalAlpha = 0.28;
-  ctx.fillStyle = scanPattern(ctx);
-  ctx.fillRect(0, 0, W, HD);
+  ctx.font = `${fs}px ${FONT_MONO}`;
+  setTracking(ctx, fs * 0.30);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = 'rgba(255,255,255,0.42)';
+  ctx.fillText(text, W * 0.065, H - H * 0.035);
   ctx.restore();
 
-  // Warm leak at the top edge and a cool one at the foot, then the frame.
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  const leak = ctx.createLinearGradient(0, 0, 0, HD * 0.16);
-  leak.addColorStop(0, preset.accentC);
-  leak.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalAlpha = 0.14;
-  ctx.fillStyle = leak;
-  ctx.fillRect(0, 0, W, HD * 0.18);
-  const cool = ctx.createLinearGradient(0, HD, 0, HD - HD * 0.12);
-  cool.addColorStop(0, preset.accentB);
-  cool.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalAlpha = 0.1;
-  ctx.fillStyle = cool;
-  ctx.fillRect(0, HD - HD * 0.14, W, HD * 0.14);
-  ctx.restore();
+  // A short accent tick at each end of the foot.
+  ctx.fillStyle = p.accent;
+  ctx.fillRect(W * 0.065, H - H * 0.052, W * 0.018, Math.max(1, H * 0.0022));
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.fillRect(W * 0.5, H - H * 0.052, W * 0.435, Math.max(1, H * 0.0012));
+}
 
-  const inset = 9;
-  ctx.save();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
-  ctx.lineWidth = 1.4;
-  ctx.strokeRect(inset, inset, W - inset * 2, HD - inset * 2);
-  ctx.globalAlpha = 0.55;
-  ctx.strokeStyle = preset.accentA;
-  ctx.lineWidth = 2;
-  const tick = 26;
-  const corners = [
-    [inset, inset, 1, 1],
-    [W - inset, inset, -1, 1],
-    [inset, HD - inset, 1, -1],
-    [W - inset, HD - inset, -1, -1],
-  ];
-  for (const [cx, cy, sx, sy] of corners) {
-    ctx.beginPath();
-    ctx.moveTo(cx + sx * tick, cy);
-    ctx.lineTo(cx, cy);
-    ctx.lineTo(cx, cy + sy * tick);
-    ctx.stroke();
+let grainTile = null;
+
+/** A 160 px noise tile, made once and tiled at low alpha over the poster. */
+function getGrainTile() {
+  if (grainTile) return grainTile;
+  const size = 160;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d');
+  const data = g.createImageData(size, size);
+  const rand = rng(0x5eed1a);
+  for (let i = 0; i < data.data.length; i += 4) {
+    const v = 118 + Math.floor(rand() * 76);
+    data.data[i] = v;
+    data.data[i + 1] = v;
+    data.data[i + 2] = v;
+    data.data[i + 3] = 255;
   }
-  ctx.restore();
+  g.putImageData(data, 0, 0);
+  grainTile = c;
+  return c;
 }
 
-// ---------------------------------------------------------------- entry point
+function drawFinish(ctx, W, H, p) {
+  // Vignette.
+  const vig = ctx.createRadialGradient(W * 0.5, H * 0.45, Math.min(W, H) * 0.25,
+    W * 0.5, H * 0.45, Math.max(W, H) * 0.78);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(0.72, 'rgba(0,0,0,0.16)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.52)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+
+  // Grain, tiled.
+  const tile = getGrainTile();
+  const pattern = ctx.createPattern(tile, 'repeat');
+  if (pattern) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.globalAlpha = 0.11;
+    ctx.fillStyle = pattern;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  // Faint scanlines.
+  ctx.save();
+  ctx.globalAlpha = 0.055;
+  ctx.fillStyle = '#000000';
+  const step = Math.max(3, Math.round(H / 380));
+  for (let y = 0; y < H; y += step) ctx.fillRect(0, y, W, 1);
+  ctx.restore();
+
+  // Thin outer frame.
+  const inset = Math.max(3, Math.min(W, H) * 0.008);
+  ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+  ctx.lineWidth = Math.max(1, Math.min(W, H) * 0.0022);
+  ctx.strokeRect(inset, inset, W - inset * 2, H - inset * 2);
+}
+
+// ---------------------------------------------------------------------------
+// The whole poster
+// ---------------------------------------------------------------------------
+
+/** Vertical split: the photo grid above, the title band below. */
+function bandSplit(aspect) {
+  if (aspect >= 1.45) return { gridTop: 0.035, gridBottom: 0.70, bandTop: 0.705 };
+  if (aspect >= 1.15) return { gridTop: 0.035, gridBottom: 0.665, bandTop: 0.672 };
+  if (aspect <= 0.85) return { gridTop: 0.035, gridBottom: 0.645, bandTop: 0.652 };
+  return { gridTop: 0.035, gridBottom: 0.660, bandTop: 0.668 };
+}
 
 /**
- * Paints the whole poster into `ctx`. The context's canvas decides the pixel size; `opts` carries the copy and
- * the panel states:
- *   count      2..6 panels
- *   panels     [{ img, zoom, ox, oy }] one per cell (img may be null)
- *   caption    the display line, drawn in the heavy condensed face
- *   subtitle   the small tracked line above it
- *   fontScale  60..150, the title's size budget
- *   preset     one of PRESETS
- *   ratioLabel '1:1', '4:5' or '16:9', printed in the technical line
+ * Paints one cover. `opts`:
+ *   photos    an array of loaded images (HTMLImageElement / ImageBitmap), may be empty
+ *   panels    one {zoom, offsetX, offsetY} per panel
+ *   count     panel count (2..6)
+ *   caption   the title line
+ *   subtitle  the small tracked line above the title
+ *   fontScale 0.6 .. 1.5 multiplier on the title size
+ *   preset    one of PRESETS
+ *   frameId   '1:1' | '4:5' | '16:9', used for the colophon's labels
+ *   seed      number; keeps the star field stable across repaints
  */
 export function renderCover(ctx, opts) {
-  const canvas = ctx.canvas;
-  const width = canvas.width;
-  const height = canvas.height;
-  if (!(width > 0 && height > 0)) return;
+  const W = ctx.canvas.width;
+  const H = ctx.canvas.height;
   const preset = opts.preset ?? PRESETS[0];
-  const scale = width / DESIGN_WIDTH;
+  const aspect = W / H;
+  const split = bandSplit(aspect);
+  const count = Math.min(MAX_PANELS, Math.max(2, opts.count ?? 4));
+  const seed = opts.seed ?? 1337;
 
   ctx.save();
-  ctx.setTransform(scale, 0, 0, scale, 0, 0);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, W, H);
 
-  const plan = planLayout(ctx, opts, width, height);
-  drawBackdrop(ctx, plan, preset);
+  drawBackdrop(ctx, W, H, preset, seed);
 
-  // Gutters first: the whole grid sits on a black plate so the gaps stay black whatever the backdrop does.
-  ctx.fillStyle = preset.gutter;
-  ctx.fillRect(plan.grid.x - plan.gutter, plan.grid.y - plan.gutter, plan.grid.w + plan.gutter * 2, plan.grid.h + plan.gutter * 2);
+  const full = {
+    ...opts,
+    ...split,
+    count,
+    aspect,
+    frameId: opts.frameId ?? '1:1',
+    preset,
+  };
+  drawPanels(ctx, W, H, full, preset);
+  drawGrade(ctx, W, H, full, preset, { x: W * 0.5, y: H * 0.46 });
 
-  const panels = opts.panels ?? [];
-  // The hero is the biggest cell: that is the print the composition is built around, and the one that gets the
-  // corner brackets and the white-hot inner rule.
-  let hero = 0;
-  plan.cells.forEach((cell, i) => {
-    const area = plan.cells[hero].w * plan.cells[hero].h;
-    if (cell.w * cell.h > area) hero = i;
-  });
-  plan.cells.forEach((cell, i) => {
-    const state = panels[i] ?? {};
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(cell.x, cell.y, cell.w, cell.h);
-    ctx.clip();
-    if (state.img) {
-      drawPhoto(ctx, state.img, cell, state);
-      gradePanel(ctx, cell, preset, i);
-    } else {
-      drawEmptyPanel(ctx, cell);
-    }
-    ctx.restore();
-    strokePanel(ctx, cell, preset, i === hero);
-    markPanel(ctx, cell, i, preset);
-  });
-
-  drawGrade(ctx, plan, preset);
-  drawTopStrip(ctx, plan, preset);
-
-  const type = planType(ctx, plan, opts, preset);
-  drawBand(ctx, plan, type, preset, opts);
-
-  drawFinish(ctx, plan, preset);
+  const band = drawTitleBand(ctx, W, H, full, preset);
+  drawColophon(ctx, W, H, full, preset, band);
+  drawTechLine(ctx, W, H, full, preset, band);
+  drawFinish(ctx, W, H, preset);
   ctx.restore();
+  return { band, split };
 }
 
-/** A one-stop helper for exports and the live preview: sizes a canvas, renders, returns it. */
-export function renderToCanvas(width, height, opts) {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  renderCover(canvas.getContext('2d'), opts);
-  return canvas;
+/** Measures the band's pieces without painting, so a caller can check they
+    do not overlap (the screenshots tooling uses this). */
+export function measureBand(ctx, opts) {
+  const W = ctx.canvas.width;
+  const H = ctx.canvas.height;
+  const aspect = W / H;
+  const split = bandSplit(aspect);
+  const bt = split.bandTop * H;
+  const size = Math.min(H * 0.205, (H - bt) * 0.56);
+  const [head, tail] = splitCaption(opts.caption);
+  const padX = W * 0.065;
+  const fitted = head
+    ? fitTitle(ctx, head, tail, W - padX * 2, size * (opts.fontScale ?? 1), H * 0.045)
+    : 0;
+  ctx.font = `${fitted}px ${FONT_TITLE}`;
+  const track = fitted * 0.055;
+  const wHead = measureTracked(ctx, head, track);
+  const wTail = tail ? measureTracked(ctx, tail, track) + fitted * 0.30 : 0;
+  return {
+    aspect,
+    split,
+    titleSize: fitted,
+    titleLeft: padX,
+    titleRight: padX + wHead + wTail,
+    bandRight: W - padX,
+    baseline: bt + (H - bt) * 0.74,
+    bandTop: bt,
+    fits: padX + wHead + wTail <= W - padX + 0.5,
+  };
 }

@@ -1,28 +1,29 @@
-// main.ts — the make.fun hand-in program for this entry (Node 22, standard library only, no build step).
+// The program that hands the app in (Node 22, standard library only).
 //
-// The app in app/ is plain static files a desktop browser loads offline: app/index.html plus its ES modules,
-// its styles and its sample photos, with no library, no CDN and no network request of any kind. This program
-// does the mechanical part the bounty asks for:
+// It copies app/ and screenshots/ from beside this file into the output
+// directory and writes dossier.json there with the vendored buildDossier, which
+// is the summary the scorer reads and the judge's view is made from. It also
+// writes a small manifest of what it copied, so a run is easy to check by hand.
 //
-//   1. create the output directory (MAKEFUN_OUTPUT_DIR, or /output as the grader sets it);
-//   2. copy app/ beside it, byte for byte;
-//   3. copy screenshots/ beside it (the first by name is the cover image);
-//   4. write dossier.json with the vendored make.fun library's buildDossier, under the scorer's own caps.
-//
-// Run it locally with:
-//   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
-// and serve the app for a look with:
-//   node serve.ts        # http://localhost:8080
+//   MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { cpSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-app.ts';
 
-/** This file's directory: app/, screenshots/ and vendor/ are all resolved from here, never the cwd. */
 const here = fileURLToPath(new URL('.', import.meta.url));
-/** Where the entry is handed in. The grader mounts /output; MAKEFUN_OUTPUT_DIR stands in elsewhere. */
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+
+// The scorer's own caps: text_max_bytes shapes the dossier's text; the rest
+// refuse an entry the scorer would refuse.
+const LIMITS = {
+  text_max_bytes: 163840,
+  screenshots: { max: 4, max_bytes: 262144 },
+  app_max_files: 993,
+  app_max_bytes: 50331648,
+  app_path_max_bytes: 1000,
+};
 
 mkdirSync(out, { recursive: true });
 cpSync(join(here, 'app'), join(out, 'app'), { recursive: true });
@@ -31,18 +32,33 @@ if (existsSync(join(here, 'screenshots'))) {
   cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
 }
 
-// The scorer's own caps (reference/gate.json). Only text_max_bytes shapes the dossier's bytes; the rest
-// refuse here exactly what the scorer would refuse: more than 4 screenshots, one over 256 KiB, more than
-// 993 entries under app/, more than 48 MiB of app files, or an app path longer than 1000 bytes.
+/** Every regular file under `dir`, as paths relative to it, sorted. */
+function walk(dir) {
+  const found = [];
+  const visit = (current) => {
+    for (const name of readdirSync(current).sort()) {
+      const full = join(current, name);
+      const info = statSync(full);
+      if (info.isDirectory()) visit(full);
+      else if (info.isFile()) found.push({ path: relative(dir, full), bytes: info.size });
+    }
+  };
+  visit(dir);
+  return found;
+}
+
+const appFiles = walk(join(out, 'app'));
+const shots = existsSync(join(out, 'screenshots'))
+  ? walk(join(out, 'screenshots')).map((f) => f.path)
+  : [];
+
 writeFileSync(
   join(out, 'dossier.json'),
-  buildDossier(out, {
-    text_max_bytes: 163840,
-    screenshots: { max: 4, max_bytes: 262144 },
-    app_max_files: 993,
-    app_max_bytes: 50331648,
-    app_path_max_bytes: 1000,
-  }),
+  buildDossier(out, LIMITS),
 );
 
-console.log(`handed in: ${out}`);
+// Nothing else is written into `out`: the platform's 1,000-entry cap is shared
+// by app/, screenshots/ and dossier.json, so the manifest goes to stdout only.
+const largest = appFiles.slice().sort((a, b) => b.bytes - a.bytes).slice(0, 3);
+console.log(`handed in ${appFiles.length} app files (${appFiles.reduce((s, f) => s + f.bytes, 0)} bytes) and ${shots.length} screenshots`);
+console.log(`largest: ${largest.map((f) => `${f.path} ${f.bytes}B`).join(', ')}`);
